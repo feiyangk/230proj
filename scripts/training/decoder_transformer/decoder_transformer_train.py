@@ -826,6 +826,9 @@ def train(
     if checkpoint_path.exists():
         try:
             print(f"\n📂 Found existing checkpoint: {checkpoint_path}")
+            # Clear GPU cache to reduce memory fragmentation before loading checkpoint
+            if device.type == 'cuda':
+                torch.cuda.empty_cache()
             # Use weights_only=False for backward compatibility with checkpoints containing numpy objects
             checkpoint = torch.load(checkpoint_path, map_location=device, weights_only=False)
             model.load_state_dict(checkpoint['model_state_dict'])
