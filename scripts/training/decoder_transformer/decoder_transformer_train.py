@@ -223,7 +223,8 @@ class DecoderOnlyTransformerAR(nn.Module):
         
         # Initial hidden state of GRU from encoder context
         # GRU expects [num_layers, batch, hidden_dim]
-        h0 = context.unsqueeze(0)  # [1, B, d_model]
+        # Make sure h0 is contiguous (required by GRU)
+        h0 = context.unsqueeze(0).contiguous()  # [1, B, d_model]
 
         # Start token: [B, 1, 1] - ensure it's on the same device as context
         start = self.start_token.expand(batch_size, 1, self.future_input_dim).to(device)
