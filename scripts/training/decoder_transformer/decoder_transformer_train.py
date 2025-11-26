@@ -817,7 +817,25 @@ def train(
     
     training_start_time = time.time()
     
-    for epoch in range(epochs):
+    # Check for existing checkpoint to resume from
+    checkpoint_path = output_dir / f'decoder_transformer_best{eval_suffix}.pt'
+    start_epoch = 0
+    if checkpoint_path.exists():
+        try:
+            print(f"\n📂 Found existing checkpoint: {checkpoint_path}")
+            checkpoint = torch.load(checkpoint_path, map_location=device)
+            model.load_state_dict(checkpoint['model_state_dict'])
+            optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+            start_epoch = checkpoint.get('epoch', 0) + 1
+            best_val_loss = checkpoint.get('val_loss', float('inf'))
+            best_val_mae = checkpoint.get('val_mae', float('inf'))
+            print(f"   Resuming from epoch {start_epoch} (best val_loss: {best_val_loss:.4f})")
+        except Exception as e:
+            print(f"   ⚠️  Could not load checkpoint: {e}")
+            print(f"   Starting from scratch...")
+            start_epoch = 0
+    
+    for epoch in range(start_epoch, epochs):
         epoch_start_time = time.time()
         
         train_loss, avg_unclipped, max_unclipped, avg_clipped, max_clipped = train_epoch(
