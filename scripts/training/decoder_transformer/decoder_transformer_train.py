@@ -496,7 +496,12 @@ def evaluate(model, val_loader, criterion, device, use_teacher_forcing=True, log
             total_loss += loss.item()
             all_predictions.append(predictions.cpu().numpy())
             all_targets.append(y_batch.cpu().numpy())
+            
+            # Progress update every batch or at end
+            if (batch_idx + 1) % 1 == 0 or (batch_idx + 1) == total_batches:
+                print(f"\r  Validation: {batch_idx + 1}/{total_batches} batches (loss: {total_loss / (batch_idx + 1):.4f})", end='', flush=True)
     
+    print()  # New line after progress
     all_predictions = np.concatenate(all_predictions, axis=0)
     all_targets = np.concatenate(all_targets, axis=0)
     
@@ -758,9 +763,14 @@ def train(
                 base_log_dir = Path(config.get('logging', {}).get('log_dir', 'logs/tensorboard'))
                 log_dir = base_log_dir / f"decoder{eval_suffix}" / timestamp
                 log_dir.mkdir(parents=True, exist_ok=True)
+                print(f"   Created directory: {log_dir} (exists: {log_dir.exists()})")
                 writer = SummaryWriter(str(log_dir))
+                print(f"   SummaryWriter created successfully")
                 print(f"\n📊 TensorBoard logs → {log_dir}")
                 print(f"   View with: tensorboard --logdir {base_log_dir}")
+                # Verify directory still exists after SummaryWriter creation
+                if not log_dir.exists():
+                    print(f"   ⚠️  WARNING: Directory disappeared after SummaryWriter creation!")
         except Exception as e:
             print(f"\n⚠️  TensorBoard not available: {type(e).__name__}")
             print(f"   Error details: {str(e)}")
@@ -877,6 +887,7 @@ def train(
             writer.add_scalar('Gradients/Unclipped_Avg', avg_unclipped, epoch)
             writer.add_scalar('Gradients/Clipped_Avg', avg_clipped, epoch)
             writer.add_scalar('LR', config['training']['learning_rate'], epoch)
+            writer.flush()  # Ensure logs are written to disk
             print(f"  ✅ Logged to TensorBoard (epoch {epoch})")
         else:
             print(f"  ⚠️  TensorBoard writer is None (epoch {epoch})")
