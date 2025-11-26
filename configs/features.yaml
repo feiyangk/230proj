@@ -1,0 +1,287 @@
+# Phase 2: Feature Engineering Configuration
+# This config defines how to transform raw data into ML-ready features
+
+# ============================================================
+# DATE RANGE: Filter raw data to specific dates
+# ============================================================
+date_range:
+  # Set to null to use all available data
+  # Or specify dates to filter (format: YYYY-MM-DD)
+  start_date: '2016-04-15'  # Earliest date across all sources
+  end_date: '2025-10-24'    # Latest date to include
+  # This ensures all data sources are aligned to the same date range
+
+# ============================================================
+# INPUT: Data Sources Configuration
+# ============================================================
+data_sources:
+  # Stock/ticker OHLCV data from BigQuery
+  stocks:
+    enabled: true
+    path: 'data/raw/stocks_raw.parquet'
+    
+    # Which tickers to use as input features
+    tickers:
+      - SPY    # S&P 500 ETF
+      - QQQ    # Nasdaq 100 ETF
+      - IWM    # Russell 2000 ETF
+      - XLF    # Financials
+      - XLI    # Industrials
+      - XLY    # Consumer Discretionary
+      - XLK    # Technology
+      - XLE    # Energy
+      - XLB    # Materials
+      - XLP    # Consumer Staples
+      - XLV    # Healthcare
+      - XLU    # Utilities
+      - TLT    # 20+ Year Treasury
+      - IEF    # 7-10 Year Treasury
+      - GLD    # Gold
+      - DBC    # Commodities
+    
+    # Which OHLCV columns to use (for each ticker)
+    # Options: open, high, low, close, volume, vwap
+    columns:
+      - close  # Closing price (primary)
+      - volume # Trading volume
+    
+    # Technical indicators to compute (per ticker)
+    technical_indicators:
+      # Returns over different periods
+      returns:
+        enabled: true
+        periods: [1, 5, 21]  # 1-day, 1-week, 1-month
+      
+      # Log returns (more stable)
+      log_returns:
+        enabled: true
+        periods: [1, 5, 21]
+      
+      # Rolling volatility
+      volatility:
+        enabled: true
+        windows: [5, 21]  # 1-week, 1-month
+      
+      # Moving averages
+      moving_average:
+        enabled: true
+        windows: [5, 21]  # 1-week, 1-month (removed 63 due to NaN issues)
+        types: ['sma']  # 'sma' (simple) or 'ema' (exponential)
+      
+      # RSI (Relative Strength Index)
+      rsi:
+        enabled: true
+        period: 14
+      
+      # Momentum indicators
+      momentum:
+        enabled: true
+        periods: [5, 21]  # Price momentum over N days
+  
+  # Google Trends search interest data
+  google_trends:
+    enabled: true  # Set to false to exclude Google Trends
+    path: 'data/raw/google_trends.parquet'
+    
+    # Google Trends-specific feature engineering
+    features:
+      # Use raw search interest values (0-100)
+      raw_values: true
+      
+      # Lagged values (past search interest)
+      lags:
+        enabled: true
+        periods: [1, 7, 14, 21]  # 1-day, 1-week, 2-week, 1-month lags
+      
+      # Rolling averages to smooth trends
+      rolling_average:
+        enabled: true
+        windows: [7, 14, 21]  # 1-week, 2-week, 1-month averages
+      
+      # Rate of change (momentum in search interest)
+      rate_of_change:
+        enabled: true
+        periods: [7, 14, 21]  # Change over 1-week, 2-week, 1-month
+      
+      # Z-score (normalized deviation from mean)
+      z_score:
+        enabled: true
+        window: 21  # Rolling z-score over 1 month
+      
+      # Volatility (rolling standard deviation of changes)
+      volatility:
+        enabled: true
+        windows: [7, 14, 21]  # Stability of search interest
+      
+      # RSI (Relative Strength Index)
+      # Measures momentum of search interest (0-100 scale)
+      # >70 = overbought (extreme high interest), <30 = oversold (low interest)
+      rsi:
+        enabled: true
+        period: 14  # Standard RSI period
+  
+  # GDELT news sentiment and event data
+  gdelt:
+    enabled: true  # Set to false to exclude GDELT
+    path: 'data/raw/gdelt_raw_weighted_daily.parquet'
+    
+    # GDELT columns to use as features
+    # WeightedAvg_Tone: Sentiment tone (-10 to +10, negative = bad news)
+    # WeightedAvg_Polarity: Strength of sentiment (higher = more extreme)
+    # NumSources: Number of news sources (measure of attention)
+    columns:
+      - WeightedAvg_Tone
+      - WeightedAvg_Polarity
+      - NumSources
+    
+    # GDELT-specific feature engineering
+    features:
+      # Use raw values
+      raw_values: true
+      
+      # Lagged values (past sentiment)
+      lags:
+        enabled: true
+        periods: [1, 5, 10, 21]  # 1-day, 1-week, 2-week, 1-month lags
+      
+      # Rolling averages to smooth sentiment trends
+      rolling_average:
+        enabled: true
+        windows: [5, 10, 21]  # 1-week, 2-week, 1-month averages
+      
+      # Rate of change (sentiment momentum)
+      rate_of_change:
+        enabled: true
+        periods: [5, 10, 21]  # Change over 1-week, 2-week, 1-month
+      
+      # Z-score (normalized deviation from mean)
+      z_score:
+        enabled: true
+        window: 21  # Rolling z-score over 1 month
+      
+      # Volatility (sentiment stability)
+      volatility:
+        enabled: true
+        windows: [5, 10, 21]  # Sentiment volatility
+      
+      # RSI for sentiment momentum
+      rsi:
+        enabled: true
+        period: 14  # Standard RSI period
+
+# ============================================================
+# OUTPUT: Where to save processed features
+# ============================================================
+data:
+  output_dir: 'data/processed'
+  output_format: 'parquet'  # 'parquet' or 'csv'
+
+# Output Targets: What to predict
+output_targets:
+  # Multi-horizon prediction
+  horizons:
+    # 1-month forward return
+    - name: '1M'
+      periods: 21  # ~21 trading days = 1 month
+      weight: 0.5  # Weight in final target (if using weighted average)
+    
+    # 3-month forward return
+    - name: '3M'
+      periods: 63  # ~63 trading days = 3 months
+      weight: 0.3
+    
+    # 6-month forward return
+    - name: '6M'
+      periods: 126  # ~126 trading days = 6 months
+      weight: 0.2
+  
+  # Tickers to use for target calculation
+  # Food inflation proxies (agricultural commodities)
+  target_tickers:
+    - ticker: DBA   # Agriculture ETF
+      weight: 0.25   # 25% weight
+    - ticker: WEAT  # Wheat ETF
+      weight: 0.25   # 25% weight
+    - ticker: SOYB  # Soybean ETF
+      weight: 0.25   # 25% weight
+    - ticker: RJA   # Rogers Agriculture ETF
+      weight: 0.25   # 25% weight
+  
+  # Target type: 'returns' or 'log_returns'
+  target_type: 'returns'
+  
+  # Whether to create separate target columns per horizon
+  # If false, creates single weighted average target
+  separate_horizons: true
+
+# Feature Engineering Options
+feature_engineering:
+  # Remove highly correlated features
+  remove_correlated:
+    enabled: true
+    threshold: 0.95  # Remove if correlation > 0.95
+  
+  # Feature scaling
+  scaling:
+    method: 'standard'  # 'standard', 'minmax', 'robust', or 'none'
+    per_ticker: true  # Scale each ticker's features independently
+  
+  # Handle missing values
+  missing_values:
+    method: 'forward_fill'  # 'forward_fill', 'interpolate', 'drop'
+    max_gap: 5  # Drop rows with gaps > 5 days
+  
+  # Feature selection
+  feature_selection:
+    enabled: false
+    method: 'mutual_info'  # 'mutual_info', 'f_regression', or 'none'
+    top_k: 50  # Keep top K features
+
+# Sequence/Window Configuration
+sequences:
+  # Lookback window for LSTM/Transformer models
+  sequence_length: 30  # Use past 30 days to predict future
+  
+  # Whether to create sequences (for RNN models)
+  # Set to false for MLP models
+  create_sequences: true
+  
+  # Stride for creating sequences (1 = every day)
+  stride: 1
+
+# Train/Val/Test Split
+split:
+  # Split method: 'time' (chronological) or 'random'
+  method: 'time'
+  
+  # Split ratios (must sum to 1.0)
+  train_ratio: 0.7
+  val_ratio: 0.15
+  test_ratio: 0.15
+  
+  # For time-based split, optionally specify exact dates
+  # If not specified, uses ratios
+  dates:
+    train_end: null    # e.g., '2022-12-31'
+    val_end: null      # e.g., '2023-12-31'
+    # test goes until end of data
+  
+  # Minimum samples per split
+  min_samples:
+    train: 500
+    val: 100
+    test: 100
+
+# Data Quality Checks
+quality_checks:
+  # Drop rows with any missing values after preprocessing
+  drop_missing: true
+  
+  # Check for data leakage
+  check_leakage: true
+  
+  # Verify no future data in features
+  verify_no_lookahead: true
+  
+  # Report feature statistics
+  report_stats: true
