@@ -1,0 +1,126 @@
+# PAN-NAN Fusion model configuration
+
+bigquery:
+  project_id: inflation-prediction-478715
+  dataset_id: raw_dataset
+
+data:
+  tickers:
+    symbols:
+      - SPY
+      - QQQ
+      - IWM
+      - RSP
+      - XLF
+      - XLI
+      - XLY
+      - XLK
+      - XLE
+      - XLB
+      - XLP
+      - XLV
+      - XLU
+      - XLRE
+      - TLT
+      - IEF
+      - TIP
+      - SHY
+      - LQD
+      - HYG
+      - DBC
+      - USO
+      - GLD
+      - DBA
+      - WEAT
+      - SOYB
+      - UUP
+    frequency: 'daily'
+    raw_features:
+      - close
+      - volume
+    synthetic_features:
+      - sma_50
+      - sma_200
+  start_date: '2020-05-01'
+  end_date: '2025-11-13'
+  frequency: 'daily'
+  lookback_window: 192
+  prediction_horizons: [4, 8, 16]
+  target: 'agriculture_basket_returns'
+  target_type: 'agriculture_basket'
+  target_metric: 'returns'
+  train_ratio: 0.70
+  val_ratio: 0.15
+  test_ratio: 0.15
+
+gdelt:
+  enabled: true
+  frequency: '1d'
+  topic_groups: ['inflation_prices']
+  features:
+    - weighted_avg_tone
+    - weighted_avg_polarity
+    - num_articles
+    - num_sources
+  include_lags: true
+  lag_periods: [1, 7, 30]
+
+model:
+  d_model: 96
+  n_heads: 8
+  n_layers: 3
+  d_ff: 384
+  dropout: 0.3
+  time_varying_known:
+    - month_sin
+    - month_cos
+    - is_weekend
+  time_varying_unknown:
+    - close
+    - volume
+    - sma_50
+    - sma_200
+    - weighted_avg_tone
+    - weighted_avg_polarity
+    - num_articles
+    - num_sources
+    - sentiment_lag_1
+    - sentiment_lag_7
+    - sentiment_lag_30
+
+training:
+  batch_size: 64
+  epochs: 100
+  learning_rate: 0.00005
+  optimizer: 'adam'
+  weight_decay: 0.02
+  gradient_clip_norm: 1.0
+  loss_function: 'mse'
+  eval_teacher_forcing: false
+  early_stopping:
+    patience: 15
+
+logging:
+  tensorboard: false
+  log_interval: 10
+
+fincast:
+  enabled: true
+  checkpoint_path: 'external/fincast/checkpoints/v1.pth'
+  d_model: 1280
+  n_heads: 16
+  n_layers: 50
+  d_ff: 5120
+  dropout: 0.1
+  output_dim: 128
+  freeze_backbone: true
+  lr_scale: 0.2
+
+fusion:
+  enabled: true
+  sentiment_hidden_dim: 64
+  sentiment_layers: 2
+  sentiment_heads: 4
+  fusion_hidden_dim: 128
+  dropout: 0.1
+
