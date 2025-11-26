@@ -207,7 +207,8 @@ class PANDecoderTransformer(nn.Module):
         ]
 
     def _gdelt_feature_names(self) -> List[str]:
-        gdelt_cfg = self.config.get("gdelt", {})
+        # Check both top-level and data.gdelt for compatibility
+        gdelt_cfg = self.config.get("gdelt", {}) or self.config.get("data", {}).get("gdelt", {})
         features = gdelt_cfg.get("features", [])
         if gdelt_cfg.get("include_lags"):
             features.extend([f"sentiment_lag_{lag}" for lag in gdelt_cfg.get("lag_periods", [])])

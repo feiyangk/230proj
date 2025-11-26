@@ -18,5 +18,7 @@ torchaudio>=2.0.0
 tensorboard>=2.12.0
 huggingface_hub>=0.20.0  # Download FinCast checkpoints
 tqdm>=4.65.0  # Progress bars for training
+# FinCast dependencies
+beartype>=0.18.0  # Type checking for FinCast
 backtesting>=0.3.3
 google-cloud-aiplatform>=1.38.0
