@@ -797,6 +797,9 @@ def train(
     early_stopping_patience = config['training'].get('early_stopping', {}).get('patience', 10)
     use_teacher_forcing_eval = config['training'].get('eval_teacher_forcing', True)
     
+    # Determine eval suffix for checkpoint naming
+    eval_suffix = "_tf" if use_teacher_forcing_eval else "_ar"
+    
     print(f"\n Starting training for {epochs} epochs...")
     print(f"   Device: {device}")
     print(f"   Batch size: {config['training']['batch_size']}")
