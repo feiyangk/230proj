@@ -63,9 +63,9 @@ class MultiTickerDataLoader:
             self.gdelt_include_lags = self.config['data']['gdelt'].get('include_lags', True)
             self.gdelt_lag_periods = self.config['data']['gdelt'].get('lag_periods', [1, 4, 16])
         
-        # Normalization
-        self.normalize = self.config['data']['normalize']
-        self.norm_method = self.config['data']['normalization_method']
+        # Normalization (default to standard scaling if not specified)
+        self.normalize = self.config['data'].get('normalize', True)
+        self.norm_method = self.config['data'].get('normalization_method', 'standard')
         self.scalers = {}
         
         # Weekend filtering
@@ -1261,10 +1261,11 @@ def create_data_loaders(config_path: str = 'configs/model_tft_config.yaml',
         for split_name, (X, y, ts) in splits.items()
     }
     
-    # Create dataloaders
-    batch_size = config['training']['batch_size']
-    num_workers = config['hardware']['num_workers']
-    pin_memory = config['hardware']['pin_memory']
+    # Create dataloaders (use sensible defaults if config is missing sections)
+    batch_size = config.get('training', {}).get('batch_size', 64)
+    hardware_cfg = config.get('hardware', {})
+    num_workers = hardware_cfg.get('num_workers', 0)
+    pin_memory = hardware_cfg.get('pin_memory', False)
     
     dataloaders = {
         'train': DataLoader(
@@ -1298,10 +1299,23 @@ if __name__ == '__main__':
     
     # Parse command-line arguments
     parser = argparse.ArgumentParser(description='TFT Data Loader - Fetch and process multi-ticker data for training')
-    parser.add_argument('--force-refresh', '--reload', action='store_true', dest='force_refresh',
-                       help='Force reload from BigQuery (ignore cached .npy files)')
-    parser.add_argument('--export-temp', action='store_true',
-                       help='Export debug data to temp/ directory')
+    parser.add_argument(
+        '--config',
+        type=str,
+        default='configs/model_tft_config.yaml',
+        help='Path to model config YAML (controls tickers, dates, BigQuery tables)',
+    )
+    parser.add_argument(
+        '--force-refresh', '--reload',
+        action='store_true',
+        dest='force_refresh',
+        help='Force reload from BigQuery (ignore cached .npy files)',
+    )
+    parser.add_argument(
+        '--export-temp',
+        action='store_true',
+        help='Export debug data to temp/ directory',
+    )
     args = parser.parse_args()
     
     # Test data loading
@@ -1313,6 +1327,7 @@ if __name__ == '__main__':
         print("\n🔄 Force refresh enabled - will fetch from BigQuery...")
     
     loaders, scalers = create_data_loaders(
+        config_path=args.config,
         export_temp=args.export_temp,
         force_refresh=args.force_refresh
     )

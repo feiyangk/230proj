@@ -3,6 +3,11 @@
 bigquery:
   project_id: inflation-prediction-478715
   dataset_id: raw_dataset
+  ticker:
+    raw_table: raw_ohlcv
+    synthetic_table: synthetic_indicators
+  gdelt:
+    table: gdelt_sentiment
 
 data:
   tickers:
@@ -52,18 +57,17 @@ data:
   train_ratio: 0.70
   val_ratio: 0.15
   test_ratio: 0.15
-
-gdelt:
-  enabled: true
-  frequency: '1d'
-  topic_groups: ['inflation_prices']
-  features:
-    - weighted_avg_tone
-    - weighted_avg_polarity
-    - num_articles
-    - num_sources
-  include_lags: true
-  lag_periods: [1, 7, 30]
+  gdelt:
+    enabled: true
+    frequency: '1d'
+    topic_groups: ['inflation_prices']
+    features:
+      - weighted_avg_tone
+      - weighted_avg_polarity
+      - num_articles
+      - num_sources
+    include_lags: true
+    lag_periods: [1, 7, 30]
 
 model:
   d_model: 96
