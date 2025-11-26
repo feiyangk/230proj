@@ -235,6 +235,10 @@ class PANDecoderTransformer(nn.Module):
     def _augment_with_fincast(self, price_series: torch.Tensor, synth_features: torch.Tensor) -> torch.Tensor:
         batch_size, seq_len, num_prices = price_series.shape
 
+        # Ensure price_series is on the same device as FinCast
+        device = next(self.fincast.parameters()).device if hasattr(self.fincast, 'parameters') else price_series.device
+        price_series = price_series.to(device)
+        
         prices_flat = price_series.permute(0, 2, 1).contiguous().view(-1, seq_len)
         fincast_hidden = self.fincast(prices_flat)
 

@@ -101,6 +101,14 @@ class FinCastBackbone(nn.Module):
         print(f"   Checkpoint: {pretrained_path}")
         
         # Create FFM hyperparameters matching the checkpoint
+        # Force GPU backend if CUDA is available
+        use_gpu = torch.cuda.is_available()
+        backend = "gpu" if use_gpu else "cpu"
+        if use_gpu:
+            print(f"   🚀 Using GPU backend for FinCast")
+        else:
+            print(f"   ⚠️  CUDA not available, using CPU backend")
+        
         self.hparams = FFmHparams(
             context_len=max_len,
             horizon_len=128,        # Not used for embedding extraction
@@ -110,7 +118,7 @@ class FinCastBackbone(nn.Module):
             num_heads=16,           # From pre-trained model
             model_dims=1280,        # From pre-trained model
             per_core_batch_size=32,
-            backend="cpu" if not torch.cuda.is_available() else "gpu",
+            backend=backend,
             use_positional_embedding=False,
             num_experts=4,          # MoE configuration (must match checkpoint!)
             gating_top_n=2
@@ -131,6 +139,11 @@ class FinCastBackbone(nn.Module):
         # Register the actual PyTorch model (FFmTorch._model) as a submodule
         # so PyTorch tracks its parameters
         self.ffm_model = self.ffm_wrapper._model
+        
+        # Move FFM model to GPU if available (backend="gpu" doesn't automatically move it)
+        if use_gpu and torch.cuda.is_available():
+            self.ffm_model = self.ffm_model.cuda()
+            print(f"   ✅ FinCast FFM model moved to GPU")
         
         # Create a projection layer to reduce dimensions if needed
         # This allows flexibility in output dimension

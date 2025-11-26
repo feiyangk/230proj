@@ -225,8 +225,8 @@ class DecoderOnlyTransformerAR(nn.Module):
         # GRU expects [num_layers, batch, hidden_dim]
         h0 = context.unsqueeze(0)  # [1, B, d_model]
 
-        # Start token: [B, 1, 1]
-        start = self.start_token.expand(batch_size, 1, self.future_input_dim)
+        # Start token: [B, 1, 1] - ensure it's on the same device as context
+        start = self.start_token.expand(batch_size, 1, self.future_input_dim).to(device)
         
         if y_future is not None and teacher_forcing:
             # Teacher forcing over horizons:
