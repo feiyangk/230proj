@@ -105,7 +105,7 @@ training:
     patience: 15
 
 logging:
-  tensorboard: false
+  tensorboard: true
   log_interval: 10
 
 fincast:
