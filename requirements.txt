@@ -16,6 +16,7 @@ torch>=2.0.0
 torchvision>=0.15.0
 torchaudio>=2.0.0
 tensorboard>=2.12.0
+huggingface_hub>=0.20.0  # Download FinCast checkpoints
 tqdm>=4.65.0  # Progress bars for training
 backtesting>=0.3.3
 google-cloud-aiplatform>=1.38.0
