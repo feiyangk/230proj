@@ -1,7 +1,7 @@
 # PAN-NAN Fusion model configuration
 
 bigquery:
-  project_id: inflation-prediction-478715
+  project_id: tidy-rainfall-477323-a5
   dataset_id: raw_dataset
   ticker:
     raw_table: raw_ohlcv
