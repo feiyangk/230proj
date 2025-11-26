@@ -850,6 +850,9 @@ def train(
             writer.add_scalar('Gradients/Unclipped_Avg', avg_unclipped, epoch)
             writer.add_scalar('Gradients/Clipped_Avg', avg_clipped, epoch)
             writer.add_scalar('LR', config['training']['learning_rate'], epoch)
+            print(f"  ✅ Logged to TensorBoard (epoch {epoch})")
+        else:
+            print(f"  ⚠️  TensorBoard writer is None (epoch {epoch})")
         
         # Every 10 epochs, dump layer-wise grad stats
         if (epoch + 1) % 10 == 0:
