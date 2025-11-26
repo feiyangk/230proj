@@ -32,9 +32,12 @@ class MultiTickerDataLoader:
         with open(config_path, 'r') as f:
             self.config = yaml.safe_load(f)
         
-        self.project_id = os.getenv('GCP_PROJECT_ID')
+        bigquery_cfg = self.config.get('bigquery', {})
+        self.project_id = os.getenv('GCP_PROJECT_ID', bigquery_cfg.get('project_id'))
         if not self.project_id:
-            raise ValueError("GCP_PROJECT_ID environment variable not set")
+            raise ValueError(
+                "Missing GCP project. Set GCP_PROJECT_ID env var or bigquery.project_id in the config."
+            )
         
         self.client = bigquery.Client(project=self.project_id)
         

@@ -1,0 +1,3 @@
+# Ignore FinCast checkpoints (downloaded at training time)
+external/fincast/checkpoints/*.pth
+
