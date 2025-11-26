@@ -826,15 +826,18 @@ def train(
     if checkpoint_path.exists():
         try:
             print(f"\n📂 Found existing checkpoint: {checkpoint_path}")
-            checkpoint = torch.load(checkpoint_path, map_location=device)
+            # Use weights_only=False for backward compatibility with checkpoints containing numpy objects
+            checkpoint = torch.load(checkpoint_path, map_location=device, weights_only=False)
             model.load_state_dict(checkpoint['model_state_dict'])
             optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
             start_epoch = checkpoint.get('epoch', 0) + 1
             best_val_loss = checkpoint.get('val_loss', float('inf'))
             best_val_mae = checkpoint.get('val_mae', float('inf'))
-            print(f"   Resuming from epoch {start_epoch} (best val_loss: {best_val_loss:.4f})")
+            print(f"   ✅ Resuming from epoch {start_epoch} (best val_loss: {best_val_loss:.4f})")
         except Exception as e:
             print(f"   ⚠️  Could not load checkpoint: {e}")
+            import traceback
+            print(f"   Traceback: {traceback.format_exc()}")
             print(f"   Starting from scratch...")
             start_epoch = 0
     
