@@ -729,12 +729,36 @@ def train(
     print("\n" + "="*80)
     print("   Model Architecture")
     print("="*80)
-    print(f"\nArchitecture: Decoder-Only Autoregressive Transformer")
+    
+    # Read FinCast and Fusion config from YAML to determine model type
+    fincast_config = config.get('fincast', {})
+    use_fincast = fincast_config.get('enabled', False)
+    fusion_config = config.get('fusion', {})
+    use_fusion = fusion_config.get('enabled', False)
+    
+    # Determine architecture name based on model type
+    if use_fusion and use_fincast:
+        architecture_name = "PAN-NAN Fusion (Price Attention Network + Non-price Attention Network)"
+    elif use_fincast:
+        architecture_name = "Decoder-Only Autoregressive Transformer with FinCast"
+    else:
+        architecture_name = "Decoder-Only Autoregressive Transformer"
+    
+    print(f"\nArchitecture: {architecture_name}")
     print(f"  d_model: {config['model']['d_model']}")
     print(f"  n_layers: {config['model']['n_layers']}")
     print(f"  n_heads: {config['model']['n_heads']}")
     print(f"  d_ff: {config['model']['d_ff']}")
     print(f"  dropout: {config['model']['dropout']}")
+    
+    # Print fusion-specific config if enabled
+    if use_fusion:
+        print(f"\nFusion Configuration:")
+        print(f"  Sentiment hidden dim: {fusion_config.get('sentiment_hidden_dim', 64)}")
+        print(f"  Sentiment layers: {fusion_config.get('sentiment_layers', 2)}")
+        print(f"  Sentiment heads: {fusion_config.get('sentiment_heads', 4)}")
+        print(f"  Fusion hidden dim: {fusion_config.get('fusion_hidden_dim', 128)}")
+    
     print(f"\nTraining:")
     print(f"  Epochs: {config['training']['epochs']}")
     print(f"  Batch size: {config['training']['batch_size']}")
@@ -742,11 +766,7 @@ def train(
     print(f"  Weight decay: {config['training'].get('weight_decay', 0.0)}")
     print(f"  Gradient clip: {config['training'].get('gradient_clip_norm', None)}")
     
-    # Read FinCast config from YAML
-    fincast_config = config.get('fincast', {})
-    use_fincast = fincast_config.get('enabled', False)
-    
-    # Initialize model (with or without FinCast)
+    # Initialize model (with or without FinCast/Fusion)
     if use_fincast:
         if not FINCAST_AVAILABLE or DecoderTransformerWithFinCast is None:
             raise ImportError(
@@ -755,7 +775,10 @@ def train(
                 "See scripts/03_training/README.md for setup instructions."
             )
         
-        print(f"\n🔧 Initializing model with FinCast integration...")
+        if use_fusion:
+            print(f"\n🔧 Initializing PAN-NAN Fusion model...")
+        else:
+            print(f"\n🔧 Initializing model with FinCast integration...")
         
         # Build model config from YAML settings
         model_fincast_config = {
@@ -769,12 +792,25 @@ def train(
             'output_dim': fincast_config.get('output_dim', 128)
         }
         
-        model = DecoderTransformerWithFinCast(
-            config=config,
-            num_features=num_features,
-            fincast_config=model_fincast_config,
-            decoder_transformer_class=DecoderOnlyTransformerAR
-        ).to(device)
+        # Build model - FusionDecoderTransformer accepts fusion_config, standard doesn't
+        if use_fusion:
+            # When fusion is enabled, DecoderTransformerWithFinCast is swapped with FusionDecoderTransformer
+            # which accepts fusion_config parameter
+            model = DecoderTransformerWithFinCast(
+                config=config,
+                num_features=num_features,
+                fincast_config=model_fincast_config,
+                decoder_transformer_class=DecoderOnlyTransformerAR,
+                fusion_config=fusion_config
+            ).to(device)
+        else:
+            # Standard FinCast wrapper doesn't accept fusion_config
+            model = DecoderTransformerWithFinCast(
+                config=config,
+                num_features=num_features,
+                fincast_config=model_fincast_config,
+                decoder_transformer_class=DecoderOnlyTransformerAR
+            ).to(device)
     else:
         print(f"\n🔧 Initializing standard decoder transformer...")
         model = DecoderOnlyTransformerAR(config, num_features).to(device)
