@@ -82,6 +82,12 @@ def main():
         default=None,
         help='Override FinCast checkpoint path from config'
     )
+    parser.add_argument(
+        '--seed',
+        type=int,
+        default=None,
+        help='Random seed for reproducibility (sets PyTorch, NumPy, and Python random seeds)'
+    )
     
     args = parser.parse_args()
     
@@ -118,7 +124,8 @@ def main():
     # Train
     try:
         train(
-            config_path=args.config
+            config_path=args.config,
+            seed=args.seed
         )
     except Exception as e:
         print(f"\n❌ Training failed: {str(e)}")

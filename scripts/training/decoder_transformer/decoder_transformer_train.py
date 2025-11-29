@@ -19,6 +19,7 @@ import torch.nn as nn
 import torch.optim as optim
 import numpy as np
 import math
+import random
 import importlib.util
 from datetime import datetime
 from pathlib import Path
@@ -27,6 +28,19 @@ from typing import Optional, Dict
 # Add project root to path
 project_root = Path(__file__).parent.parent.parent.parent
 sys.path.insert(0, str(project_root))
+
+# Import TensorBoard utilities
+common_path = Path(__file__).parent.parent / 'common'
+if str(common_path) not in sys.path:
+    sys.path.insert(0, str(common_path))
+
+try:
+    import tensorboard_utils as tb_utils
+    print(f"\n✅ TensorBoard utilities loaded from: {tb_utils.__file__}")
+except ImportError as e:
+    print(f"\n⚠️  CRITICAL: Failed to import TensorBoard utilities: {e}")
+    print(f"   Looked in: {common_path}")
+    raise
 
 
 class PositionalEncoding(nn.Module):
@@ -460,13 +474,17 @@ def train_epoch(model, train_loader, optimizer, criterion, device, clip_norm=Non
     return avg_loss, avg_unclipped, max_unclipped, avg_clipped, max_clipped
 
 
-def evaluate(model, val_loader, criterion, device, use_teacher_forcing=True, log_mode=False):
+def evaluate(model, val_loader, criterion, device, use_teacher_forcing=True, log_mode=False, horizons=None):
     """Evaluate model on validation set.
     
     Args:
         use_teacher_forcing: If True, use ground truth for next-step inputs (faster, cleaner metrics).
                             If False, use pure autoregressive loop (realistic inference).
         log_mode: If True, print which evaluation mode is being used (for first call)
+        horizons: Optional list of actual horizon values for labeling per-horizon metrics
+    
+    Returns:
+        avg_loss, mae, rmse, dir_acc, per_horizon_metrics
     """
     model.eval()
     total_loss = 0.0
@@ -514,13 +532,27 @@ def evaluate(model, val_loader, criterion, device, use_teacher_forcing=True, log
     true_direction = (all_targets[:, 0] > 0).astype(int)
     dir_acc = (pred_direction == true_direction).mean()
     
-    return avg_loss, mae, rmse, dir_acc
+    # Compute per-horizon metrics
+    per_horizon_metrics = {}
+    num_horizons = all_predictions.shape[1]
+    for h_idx in range(num_horizons):
+        h_mae = np.abs(all_predictions[:, h_idx] - all_targets[:, h_idx]).mean()
+        h_rmse = np.sqrt(((all_predictions[:, h_idx] - all_targets[:, h_idx]) ** 2).mean())
+        
+        # Use actual horizon values for labeling
+        horizon_label = f"H{horizons[h_idx]}" if (horizons and h_idx < len(horizons)) else f"H{h_idx+1}"
+        
+        per_horizon_metrics[f"{horizon_label}_MAE"] = h_mae
+        per_horizon_metrics[f"{horizon_label}_RMSE"] = h_rmse
+    
+    return avg_loss, mae, rmse, dir_acc, per_horizon_metrics
 
 
 def train(
     config_path: str,
     dataloaders: Optional[Dict] = None,
-    scalers: Optional[Dict] = None
+    scalers: Optional[Dict] = None,
+    seed: Optional[int] = None
 ):
     """
     Core decoder transformer training function.
@@ -529,10 +561,23 @@ def train(
         config_path: Path to model config YAML
         dataloaders: Optional pre-loaded DataLoaders (if None, will load from data/processed/)
         scalers: Optional pre-loaded scalers
+        seed: Optional random seed for reproducibility. If provided, sets seeds for PyTorch, NumPy, and Python's random module.
         
     Note:
         FinCast configuration is now read from the config YAML file under the 'fincast' section.
     """
+    # Set random seed for reproducibility if provided
+    if seed is not None:
+        print(f"\n🌱 Setting random seed: {seed}")
+        torch.manual_seed(seed)
+        torch.cuda.manual_seed_all(seed)  # For multi-GPU setups
+        np.random.seed(seed)
+        random.seed(seed)
+        # Ensure deterministic behavior in PyTorch (may reduce performance)
+        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.benchmark = False
+        print(f"   ✅ Random seed set for PyTorch, NumPy, and Python random module")
+    
     # Load config
     with open(config_path, 'r') as f:
         config = yaml.safe_load(f)
@@ -581,7 +626,12 @@ def train(
         
         # Create DataLoaders with no workers (Mac compatibility)
         batch_size = config['training']['batch_size']
-        train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=0)
+        # Use generator with seed for reproducible shuffling if seed is provided
+        generator = None
+        if seed is not None:
+            generator = torch.Generator()
+            generator.manual_seed(seed)
+        train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=0, generator=generator)
         val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=0)
         test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=0)
         
@@ -736,48 +786,10 @@ def train(
     print(f"   Total: {total_params:,}")
     print(f"   Trainable: {trainable_params:,}")
     
-    # Setup TensorBoard (lazy import to avoid Mac ARM64 issues)
-    writer = None
-    if config.get('logging', {}).get('tensorboard', False):
-        try:
-            # Lazy import - only load when actually needed
-            from torch.utils.tensorboard import SummaryWriter
-            
-            # Get evaluation mode early for TensorBoard path
-            use_teacher_forcing_eval = config['training'].get('eval_teacher_forcing', True)
-            
-            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-            eval_suffix = "_tf" if use_teacher_forcing_eval else "_ar"
-            
-            # Check for Vertex AI TensorBoard directory (set automatically by Vertex AI)
-            tensorboard_log_dir = os.getenv('AIP_TENSORBOARD_LOG_DIR')
-            
-            if tensorboard_log_dir:
-                # Vertex AI managed TensorBoard - logs auto-sync
-                log_dir = tensorboard_log_dir
-                writer = SummaryWriter(str(log_dir))
-                print(f"\n📊 TensorBoard (Vertex AI): {log_dir}")
-                print(f"   Logs will auto-sync to TensorBoard instance")
-            else:
-                # Local or manual TensorBoard - use local paths
-                base_log_dir = Path(config.get('logging', {}).get('log_dir', 'logs/tensorboard'))
-                log_dir = base_log_dir / f"decoder{eval_suffix}" / timestamp
-                log_dir.mkdir(parents=True, exist_ok=True)
-                print(f"   Created directory: {log_dir} (exists: {log_dir.exists()})")
-                writer = SummaryWriter(str(log_dir))
-                print(f"   SummaryWriter created successfully")
-                print(f"\n📊 TensorBoard logs → {log_dir}")
-                print(f"   View with: tensorboard --logdir {base_log_dir}")
-                # Verify directory still exists after SummaryWriter creation
-                if not log_dir.exists():
-                    print(f"   ⚠️  WARNING: Directory disappeared after SummaryWriter creation!")
-        except Exception as e:
-            print(f"\n⚠️  TensorBoard not available: {type(e).__name__}")
-            print(f"   Error details: {str(e)}")
-            import traceback
-            print(f"   Traceback: {traceback.format_exc()}")
-            print("   Training will continue without TensorBoard logging")
-            writer = None
+    # Setup TensorBoard
+    use_teacher_forcing_eval = config['training'].get('eval_teacher_forcing', True)
+    eval_suffix = "_tf" if use_teacher_forcing_eval else "_ar"
+    writer = tb_utils.initialize_tensorboard_writer(config, 'decoder', eval_suffix)
     
     # Loss and optimizer
     criterion = nn.MSELoss()
@@ -798,6 +810,45 @@ def train(
         weight_decay=config['training'].get('weight_decay', 0.0)
     )
     
+    # Log comprehensive experiment info to TensorBoard
+    eval_mode = "Teacher Forcing" if use_teacher_forcing_eval else "Pure Autoregressive"
+    additional_model_info = {
+        'Model Type': 'FinCast-Enhanced' if use_fincast else 'Standard Decoder Transformer',
+        'Evaluation Mode': eval_mode,
+    }
+    if use_fincast:
+        additional_model_info['FinCast Checkpoint'] = fincast_config.get('checkpoint_path', 'N/A')
+        additional_model_info['FinCast LR Scale'] = f"{fincast_config.get('lr_scale', 1.0)}x"
+    
+    # Get dataset metadata for logging
+    dataset_version = None
+    start_date = config.get('data', {}).get('start_date', 'N/A')
+    end_date = config.get('data', {}).get('end_date', 'N/A')
+    train_samples = 0
+    val_samples = 0
+    test_samples = 0
+    
+    try:
+        metadata_path = Path('data/processed/metadata.yaml')
+        if metadata_path.exists():
+            with open(metadata_path, 'r') as f:
+                metadata = yaml.safe_load(f)
+                train_samples = metadata.get('train_samples', 0)
+                val_samples = metadata.get('val_samples', 0)
+                test_samples = metadata.get('test_samples', 0)
+                start_date = metadata.get('start_date', start_date)
+                end_date = metadata.get('end_date', end_date)
+    except Exception:
+        pass
+    
+    tb_utils.log_experiment_metadata(
+        writer, dataset_version, start_date, end_date, horizons_config,
+        lookback, num_features, num_horizons,
+        train_samples, val_samples, test_samples,
+        'Decoder Transformer', config, total_params, trainable_params,
+        additional_model_info
+    )
+    
     # Training hyperparams with early stopping
     best_val_loss = float('inf')
     best_val_mae = float('inf')
@@ -806,6 +857,7 @@ def train(
     clip_norm = config['training'].get('gradient_clip_norm', None)
     early_stopping_patience = config['training'].get('early_stopping', {}).get('patience', 10)
     use_teacher_forcing_eval = config['training'].get('eval_teacher_forcing', True)
+    eval_mode = "Teacher Forcing" if use_teacher_forcing_eval else "Pure Autoregressive"
     
     # Determine eval suffix for checkpoint naming
     eval_suffix = "_tf" if use_teacher_forcing_eval else "_ar"
@@ -861,10 +913,11 @@ def train(
             model, train_loader, optimizer, criterion, device, clip_norm
         )
         
-        val_loss, mae, rmse, dir_acc = evaluate(
+        val_loss, mae, rmse, dir_acc, per_horizon_metrics = evaluate(
             model, val_loader, criterion, device, 
             use_teacher_forcing=use_teacher_forcing_eval,
-            log_mode=(epoch == 0)  # Log mode only on first epoch
+            log_mode=(epoch == 0),  # Log mode only on first epoch
+            horizons=horizons_config
         )
         
         epoch_time = time.time() - epoch_start_time
@@ -874,23 +927,32 @@ def train(
         print(f"  Train Loss: {train_loss:.6f}")
         print(f"  Val   Loss: {val_loss:.6f}, MAE: {mae:.6f}, RMSE: {rmse:.6f}")
         print(f"  Dir Acc (H1): {dir_acc * 100:.2f}%")
+        
+        # Print per-horizon MAE
+        horizon_strs = []
+        for key, value in per_horizon_metrics.items():
+            if 'MAE' in key:
+                horizon_strs.append(f"{key}={value:.6f}")
+        if horizon_strs:
+            print(f"  Per-Horizon MAE: {', '.join(horizon_strs)}")
+        
         print(f"  Grad Norm (unclipped): avg={avg_unclipped:.4f}, max={max_unclipped:.4f}")
         print(f"  Grad Norm (clipped):   avg={avg_clipped:.4f}, max={max_clipped:.4f}")
         
         # Log to TensorBoard
-        if writer is not None:
-            writer.add_scalar('Loss/train', train_loss, epoch)
-            writer.add_scalar('Loss/val', val_loss, epoch)
-            writer.add_scalar('Metrics/MAE', mae, epoch)
-            writer.add_scalar('Metrics/RMSE', rmse, epoch)
-            writer.add_scalar('Metrics/DirectionalAccuracy', dir_acc, epoch)
-            writer.add_scalar('Gradients/Unclipped_Avg', avg_unclipped, epoch)
-            writer.add_scalar('Gradients/Clipped_Avg', avg_clipped, epoch)
-            writer.add_scalar('LR', config['training']['learning_rate'], epoch)
-            writer.flush()  # Ensure logs are written to disk
-            print(f"  ✅ Logged to TensorBoard (epoch {epoch})")
-        else:
-            print(f"  ⚠️  TensorBoard writer is None (epoch {epoch})")
+        try:
+            tb_utils.log_epoch_metrics(
+                writer, epoch, train_loss, val_loss, mae, rmse, dir_acc,
+                per_horizon_metrics, config['training']['learning_rate'],
+                avg_unclipped, avg_clipped
+            )
+            # Flush to ensure data is written immediately
+            if writer is not None:
+                writer.flush()
+        except Exception as e:
+            print(f"\n⚠️  ERROR logging epoch metrics: {e}")
+            import traceback
+            traceback.print_exc()
         
         # Every 10 epochs, dump layer-wise grad stats
         if (epoch + 1) % 10 == 0:
@@ -913,6 +975,17 @@ def train(
                     f"max={stats['max']:.6f}, "
                     f"std={stats['std']:.6f}"
                 )
+            
+            # Log gradient and weight histograms to TensorBoard
+            try:
+                tb_utils.log_gradients_and_weights(writer, model, epoch)
+                if writer is not None:
+                    writer.flush()
+                print(f"  ✅ Logged histograms")
+            except Exception as e:
+                print(f"  ⚠️  ERROR logging histograms: {e}")
+                import traceback
+                traceback.print_exc()
         
         print("")
         
@@ -944,7 +1017,70 @@ def train(
                 print(f"\n⏹️  Early stopping triggered (patience: {patience_counter})")
                 break
     
-    # Close TensorBoard writer
+    # Final evaluation on test set
+    print("\n" + "="*80)
+    print("   Final Test Set Evaluation")
+    print("="*80)
+    
+    # Load best model
+    eval_suffix = "_tf" if use_teacher_forcing_eval else "_ar"
+    checkpoint_path = output_dir / f'decoder_transformer_best{eval_suffix}.pt'
+    if checkpoint_path.exists():
+        checkpoint = torch.load(checkpoint_path, map_location=device, weights_only=False)
+        model.load_state_dict(checkpoint['model_state_dict'])
+    else:
+        print(f"⚠️  Checkpoint not found: {checkpoint_path}")
+        print("   Using current model state for test evaluation")
+    
+    test_loss, test_mae, test_rmse, test_dir_acc, test_per_horizon = evaluate(
+        model, test_loader, criterion, device,
+        use_teacher_forcing=use_teacher_forcing_eval,
+        log_mode=False,
+        horizons=horizons_config
+    )
+    
+    print(f"\n📊 Test Set Results:")
+    print(f"  Test Loss: {test_loss:.6f}")
+    print(f"  Test MAE: {test_mae:.6f}")
+    print(f"  Test RMSE: {test_rmse:.6f}")
+    print(f"  Test Dir Acc (H1): {test_dir_acc * 100:.2f}%")
+    
+    # Log per-horizon test metrics
+    if test_per_horizon:
+        horizon_strs = []
+        for key, value in sorted(test_per_horizon.items()):
+            if 'MAE' in key:
+                horizon_strs.append(f"{key}={value:.6f}")
+        if horizon_strs:
+            print(f"  Per-Horizon MAE: {', '.join(horizon_strs)}")
+    
+    # Log hyperparameters to TensorBoard HParams dashboard
+    hparams = {
+        'lr': actual_lr,
+        'batch_size': config['training']['batch_size'],
+        'd_model': config['model']['d_model'],
+        'n_layers': config['model']['n_layers'],
+        'n_heads': config['model']['n_heads'],
+        'd_ff': config['model']['d_ff'],
+        'dropout': config['model']['dropout'],
+        'lookback': lookback,
+        'clip_norm': clip_norm if clip_norm else 0,
+        'eval_mode': 1 if use_teacher_forcing_eval else 0,  # 1=TF, 0=AR
+        'fincast': 1 if use_fincast else 0,
+    }
+    
+    metrics = {
+        'hparam/best_val_loss': best_val_loss,
+        'hparam/best_val_mae': best_val_mae,
+        'hparam/test_loss': test_loss,
+        'hparam/test_mae': test_mae,
+        'hparam/test_rmse': test_rmse,
+        'hparam/test_dir_acc': test_dir_acc,
+    }
+    
+    tb_utils.log_hyperparameters(writer, hparams, metrics)
+    
+    # Close writer
     if writer is not None:
         writer.close()
     
@@ -953,10 +1089,9 @@ def train(
     print("="*80)
     print(f"  Best validation loss: {best_val_loss:.4f}")
     print(f"  Best validation MAE: {best_val_mae:.4f}")
-    eval_suffix = "_tf" if use_teacher_forcing_eval else "_ar"
     eval_mode_name = "Teacher Forcing" if use_teacher_forcing_eval else "Autoregressive"
     print(f"  Evaluation mode: {eval_mode_name}")
-    print(f"  Model saved: {output_dir / f'decoder_transformer_best{eval_suffix}.pt'}")
+    print(f"  Model saved: {checkpoint_path}")
     if writer is not None and not os.getenv('CLOUD_ML_JOB_ID'):
         print(f"\n📊 View TensorBoard: tensorboard --logdir logs/tensorboard")
     print("="*80)
