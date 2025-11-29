@@ -40,6 +40,12 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Automatically download FinCast checkpoints from Hugging Face if missing",
     )
+    parser.add_argument(
+        "--seed",
+        type=int,
+        default=None,
+        help="Random seed for reproducibility (sets PyTorch, NumPy, and Python random seeds)",
+    )
     return parser.parse_args()
 
 
@@ -72,7 +78,7 @@ def main() -> None:
     decoder_train.FINCAST_AVAILABLE = FINCAST_AVAILABLE
 
     # Kick off the standard decoder training loop using the provided config.
-    decoder_train.train(config_path=str(config_path))
+    decoder_train.train(config_path=str(config_path), seed=args.seed)
 
 
 def _ensure_fincast_checkpoint(config: dict) -> None:
