@@ -9,6 +9,7 @@ via YAML (defaults to configs/model_pan_nan_fusion.yaml).
 
 import argparse
 import sys
+import tempfile
 from pathlib import Path
 
 import yaml
@@ -22,6 +23,27 @@ from scripts.training.pan_nan_fusion.model import (
     FINCAST_AVAILABLE,
     FusionDecoderTransformer,
 )
+
+
+def parse_horizons(horizons_str: str) -> list:
+    """
+    Parse horizons from comma-separated string.
+    
+    Args:
+        horizons_str: Comma-separated string of integers (e.g., "4,8,16")
+    
+    Returns:
+        List of integers
+    """
+    try:
+        horizons = [int(h.strip()) for h in horizons_str.split(',')]
+        if not horizons:
+            raise ValueError("At least one horizon must be specified")
+        if any(h <= 0 for h in horizons):
+            raise ValueError("All horizons must be positive integers")
+        return horizons
+    except ValueError as e:
+        raise argparse.ArgumentTypeError(f"Invalid horizons format: {e}. Expected comma-separated integers (e.g., '4,8,16')")
 
 
 def parse_args() -> argparse.Namespace:
@@ -46,6 +68,12 @@ def parse_args() -> argparse.Namespace:
         default=None,
         help="Random seed for reproducibility (sets PyTorch, NumPy, and Python random seeds)",
     )
+    parser.add_argument(
+        "--horizons",
+        type=parse_horizons,
+        default=None,
+        help="Override prediction horizons from config. Comma-separated list of integers (e.g., '4,8,16')",
+    )
     return parser.parse_args()
 
 
@@ -58,6 +86,13 @@ def main() -> None:
 
     with config_path.open("r") as f:
         config = yaml.safe_load(f)
+
+    # Override prediction horizons if provided via command line
+    if args.horizons is not None:
+        if "data" not in config:
+            config["data"] = {}
+        config["data"]["prediction_horizons"] = args.horizons
+        print(f"\n📊 Overriding prediction horizons: {args.horizons}")
 
     if not config.get("fincast", {}).get("enabled", False):
         raise ValueError(
@@ -77,8 +112,18 @@ def main() -> None:
     decoder_train.DecoderTransformerWithFinCast = FusionDecoderTransformer
     decoder_train.FINCAST_AVAILABLE = FINCAST_AVAILABLE
 
+    # Write updated config to temporary file if horizons were overridden
+    if args.horizons is not None:
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as tmp_config:
+            yaml.dump(config, tmp_config)
+            tmp_config_path = tmp_config.name
+        print(f"📝 Using temporary config with overridden horizons: {tmp_config_path}")
+        config_path_to_use = tmp_config_path
+    else:
+        config_path_to_use = str(config_path)
+
     # Kick off the standard decoder training loop using the provided config.
-    decoder_train.train(config_path=str(config_path), seed=args.seed)
+    decoder_train.train(config_path=config_path_to_use, seed=args.seed)
 
 
 def _ensure_fincast_checkpoint(config: dict) -> None:
