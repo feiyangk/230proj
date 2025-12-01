@@ -8,6 +8,9 @@ import yaml
 import torch
 import torch.nn as nn
 import numpy as np
+import matplotlib.pyplot as plt
+import io
+from PIL import Image
 from pathlib import Path
 from datetime import datetime
 from torch.utils.tensorboard import SummaryWriter
@@ -303,16 +306,45 @@ def log_attention_heatmaps(writer, model, val_loader, device, epoch, num_samples
                             # Take first (and only) batch item
                             attn_map = attn_weights[0].cpu().numpy()  # [seq, seq]
                             
-                            # Normalize to [0, 1] for better visualization
-                            attn_map = (attn_map - attn_map.min()) / (attn_map.max() - attn_map.min() + 1e-8)
+                            # Check for valid values
+                            if attn_map.size == 0 or np.isnan(attn_map).all():
+                                continue
                             
-                            # Expand to 3D for image format [1, H, W] or [H, W, 1]
-                            # TensorBoard expects [C, H, W] format
-                            attn_map_3d = np.expand_dims(attn_map, 0)  # [1, seq, seq]
+                            # Normalize to [0, 1] for better visualization
+                            attn_min = attn_map.min()
+                            attn_max = attn_map.max()
+                            attn_range = attn_max - attn_min
+                            
+                            if attn_range < 1e-8:
+                                # All values are the same - use uniform visualization
+                                attn_map_norm = np.ones_like(attn_map) * 0.5
+                            else:
+                                attn_map_norm = (attn_map - attn_min) / attn_range
+                            
+                            # Create a proper heatmap using matplotlib
+                            fig, ax = plt.subplots(figsize=(10, 10))
+                            im = ax.imshow(attn_map_norm, cmap='viridis', aspect='auto', origin='upper')
+                            ax.set_title(f'Attention Weights - {layer_name} - Sample {sample_count+1}\n'
+                                       f'Range: [{attn_min:.4f}, {attn_max:.4f}]')
+                            ax.set_xlabel('Key Position (attended to)')
+                            ax.set_ylabel('Query Position (attending from)')
+                            plt.colorbar(im, ax=ax, label='Attention Weight')
+                            
+                            # Convert matplotlib figure to image
+                            buf = io.BytesIO()
+                            plt.savefig(buf, format='png', bbox_inches='tight', dpi=100)
+                            buf.seek(0)
+                            img = Image.open(buf)
+                            img_array = np.array(img)  # [H, W, C] format
+                            plt.close(fig)
+                            
+                            # Convert to [C, H, W] for TensorBoard
+                            if img_array.ndim == 3:
+                                img_array = np.transpose(img_array, (2, 0, 1))  # [C, H, W]
                             
                             # Log as image/heatmap
                             tag = f'Attention/{layer_name}/sample_{sample_count}'
-                            writer.add_image(tag, attn_map_3d, epoch, dataformats='CHW')
+                            writer.add_image(tag, img_array, epoch, dataformats='CHW')
                     
                     sample_count += 1
                     if sample_count >= num_samples:

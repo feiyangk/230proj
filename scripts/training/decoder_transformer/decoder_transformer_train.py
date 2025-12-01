@@ -552,7 +552,9 @@ def train(
     config_path: str,
     dataloaders: Optional[Dict] = None,
     scalers: Optional[Dict] = None,
-    seed: Optional[int] = None
+    seed: Optional[int] = None,
+    checkpoint_path: Optional[str] = None,
+    run_name: Optional[str] = None
 ):
     """
     Core decoder transformer training function.
@@ -562,6 +564,8 @@ def train(
         dataloaders: Optional pre-loaded DataLoaders (if None, will load from data/processed/)
         scalers: Optional pre-loaded scalers
         seed: Optional random seed for reproducibility. If provided, sets seeds for PyTorch, NumPy, and Python's random module.
+        checkpoint_path: Optional path to checkpoint file to resume training from. If None, trains from scratch.
+        run_name: Optional name for this training run (used in checkpoint filename). If None, uses timestamp.
         
     Note:
         FinCast configuration is now read from the config YAML file under the 'fincast' section.
@@ -647,9 +651,15 @@ def train(
     use_fusion = fusion_config.get('enabled', False)
     model_name = 'pan_nan' if use_fusion else 'decoder_transformer'
     
+    # Generate run_name if not provided
+    if run_name is None:
+        run_name = datetime.now().strftime('%Y%m%d_%H%M%S')
+    
     # Setup output directory
     output_dir = Path(f'models/{model_name}')
     output_dir.mkdir(parents=True, exist_ok=True)
+    
+    print(f"\n📝 Run name: {run_name}")
     
     # Setup device
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -934,17 +944,19 @@ def train(
     
     training_start_time = time.time()
     
-    # Check for existing checkpoint to resume from
-    checkpoint_path = output_dir / f'{model_name}_best{eval_suffix}.pt'
+    # Load checkpoint if provided, otherwise start from scratch
     start_epoch = 0
-    if checkpoint_path.exists():
+    if checkpoint_path is not None:
+        checkpoint_file = Path(checkpoint_path)
+        if not checkpoint_file.exists():
+            raise FileNotFoundError(f"Checkpoint file not found: {checkpoint_path}")
         try:
-            print(f"\n📂 Found existing checkpoint: {checkpoint_path}")
+            print(f"\n📂 Loading checkpoint: {checkpoint_file}")
             # Clear GPU cache to reduce memory fragmentation before loading checkpoint
             if device.type == 'cuda':
                 torch.cuda.empty_cache()
             # Use weights_only=False for backward compatibility with checkpoints containing numpy objects
-            checkpoint = torch.load(checkpoint_path, map_location=device, weights_only=False)
+            checkpoint = torch.load(checkpoint_file, map_location=device, weights_only=False)
             model.load_state_dict(checkpoint['model_state_dict'])
             optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
             start_epoch = checkpoint.get('epoch', 0) + 1
@@ -1059,9 +1071,9 @@ def train(
             patience_counter = 0
             
             # Save checkpoint with all metrics
-            # Include eval mode in filename to differentiate models
+            # Use run_name to create unique checkpoint files per run
             eval_suffix = "_tf" if use_teacher_forcing_eval else "_ar"
-            checkpoint_path = output_dir / f'{model_name}_best{eval_suffix}.pt'
+            checkpoint_path = output_dir / f'{run_name}{eval_suffix}.pt'
             torch.save({
                 'epoch': epoch,
                 'model_state_dict': model.state_dict(),
@@ -1085,9 +1097,9 @@ def train(
     print("   Final Test Set Evaluation")
     print("="*80)
     
-    # Load best model
+    # Load best model from this run
     eval_suffix = "_tf" if use_teacher_forcing_eval else "_ar"
-    checkpoint_path = output_dir / f'{model_name}_best{eval_suffix}.pt'
+    checkpoint_path = output_dir / f'{run_name}{eval_suffix}.pt'
     if checkpoint_path.exists():
         checkpoint = torch.load(checkpoint_path, map_location=device, weights_only=False)
         model.load_state_dict(checkpoint['model_state_dict'])

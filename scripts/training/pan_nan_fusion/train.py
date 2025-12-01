@@ -102,6 +102,18 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Enable FinCast backbone (overrides config fincast.enabled setting)",
     )
+    parser.add_argument(
+        "--resume",
+        type=str,
+        default=None,
+        help="Path to checkpoint file to resume training from (default: train from scratch)",
+    )
+    parser.add_argument(
+        "--run-name",
+        type=str,
+        default=None,
+        help="Name for this training run (used in checkpoint filename). If not provided, uses timestamp",
+    )
     return parser.parse_args()
 
 
@@ -208,7 +220,12 @@ def main() -> None:
         config_path_to_use = str(config_path)
 
     # Kick off the standard decoder training loop using the provided config.
-    decoder_train.train(config_path=config_path_to_use, seed=args.seed)
+    decoder_train.train(
+        config_path=config_path_to_use, 
+        seed=args.seed,
+        checkpoint_path=args.resume,
+        run_name=args.run_name
+    )
 
 
 def _ensure_fincast_checkpoint(config: dict) -> None:
