@@ -118,6 +118,11 @@ def parse_args() -> argparse.Namespace:
         default=None,
         help="Name for this training run (used in checkpoint filename). If not provided, uses timestamp",
     )
+    parser.add_argument(
+        "--force-refresh",
+        action="store_true",
+        help="Force regenerate data from BigQuery (ignore cached data/processed/). Use this when changing horizons or other data config.",
+    )
     return parser.parse_args()
 
 
@@ -228,7 +233,8 @@ def main() -> None:
         config_path=config_path_to_use, 
         seed=args.seed,
         checkpoint_path=args.resume,
-        run_name=args.run_name
+        run_name=args.run_name,
+        force_refresh=args.force_refresh
     )
 
 

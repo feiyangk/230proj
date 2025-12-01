@@ -554,7 +554,8 @@ def train(
     scalers: Optional[Dict] = None,
     seed: Optional[int] = None,
     checkpoint_path: Optional[str] = None,
-    run_name: Optional[str] = None
+    run_name: Optional[str] = None,
+    force_refresh: bool = False
 ):
     """
     Core decoder transformer training function.
@@ -566,6 +567,7 @@ def train(
         seed: Optional random seed for reproducibility. If provided, sets seeds for PyTorch, NumPy, and Python's random module.
         checkpoint_path: Optional path to checkpoint file to resume training from. If None, trains from scratch.
         run_name: Optional name for this training run (used in checkpoint filename). If None, uses timestamp.
+        force_refresh: If True, warns about horizon mismatches. Note: To actually regenerate data, run the data loader script separately.
         
     Note:
         FinCast configuration is now read from the config YAML file under the 'fincast' section.
@@ -593,6 +595,23 @@ def train(
         
         # Load preprocessed data directly from .npy files
         data_dir = Path('data/processed')
+        
+        # Check if cached data horizons match config horizons
+        if not force_refresh:
+            metadata_path = data_dir / 'metadata.yaml'
+            if metadata_path.exists():
+                try:
+                    with open(metadata_path, 'r') as f:
+                        metadata = yaml.safe_load(f)
+                        cached_horizons = metadata.get('prediction_horizons', [])
+                        config_horizons = config['data']['prediction_horizons']
+                        if cached_horizons != config_horizons:
+                            print(f"\n⚠️  WARNING: Cached data horizons {cached_horizons} don't match config horizons {config_horizons}!")
+                            print(f"   The cached data was created with different horizons.")
+                            print(f"   Use --force-refresh to regenerate data with correct horizons.")
+                            print(f"   Continuing with cached data (may produce incorrect results)...")
+                except Exception as e:
+                    print(f"   Could not check metadata: {e}")
         
         train_X_np = np.load(data_dir / 'X_train.npy', allow_pickle=True)
         train_y_np = np.load(data_dir / 'y_train.npy', allow_pickle=True)
