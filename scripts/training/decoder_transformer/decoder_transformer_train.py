@@ -825,7 +825,13 @@ def train(
     # Setup TensorBoard
     use_teacher_forcing_eval = config['training'].get('eval_teacher_forcing', True)
     eval_suffix = "_tf" if use_teacher_forcing_eval else "_ar"
-    writer = tb_utils.initialize_tensorboard_writer(config, 'decoder', eval_suffix)
+    
+    # Determine model name for TensorBoard - use 'pan-nan' if fusion is enabled
+    fusion_config = config.get('fusion', {})
+    use_fusion = fusion_config.get('enabled', False)
+    model_name_for_tb = 'pan-nan' if use_fusion else 'decoder'
+    
+    writer = tb_utils.initialize_tensorboard_writer(config, model_name_for_tb, eval_suffix)
     
     # Loss and optimizer
     criterion = nn.MSELoss()
