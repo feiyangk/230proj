@@ -92,6 +92,16 @@ def parse_args() -> argparse.Namespace:
         default=None,
         help="Override end date from config (format: YYYY-MM-DD, e.g., '2025-11-13')",
     )
+    parser.add_argument(
+        "--no-fincast",
+        action="store_true",
+        help="Disable FinCast backbone (overrides config fincast.enabled setting)",
+    )
+    parser.add_argument(
+        "--fincast",
+        action="store_true",
+        help="Enable FinCast backbone (overrides config fincast.enabled setting)",
+    )
     return parser.parse_args()
 
 
@@ -133,10 +143,31 @@ def main() -> None:
             config["data"]["end_date"] = args.end_date
             print(f"\n📅 Overriding end date: {original_end} → {args.end_date}")
 
-    if not config.get("fincast", {}).get("enabled", False):
+    # Override FinCast setting if provided via command line
+    if args.no_fincast and args.fincast:
+        raise ValueError("Cannot specify both --no-fincast and --fincast. Choose one.")
+    
+    if args.no_fincast:
+        if "fincast" not in config:
+            config["fincast"] = {}
+        original_fincast = config["fincast"].get("enabled", False)
+        config["fincast"]["enabled"] = False
+        print(f"\n🔧 Overriding FinCast: {original_fincast} → False (disabled)")
+        print(f"   ⚠️  WARNING: PAN-NAN fusion typically requires FinCast for the PAN branch.")
+        print(f"   ⚠️  Training may fail or produce poor results without FinCast.")
+    elif args.fincast:
+        if "fincast" not in config:
+            config["fincast"] = {}
+        original_fincast = config["fincast"].get("enabled", False)
+        config["fincast"]["enabled"] = True
+        print(f"\n🔧 Overriding FinCast: {original_fincast} → True (enabled)")
+
+    # Check FinCast requirement (only if not explicitly disabled)
+    if not config.get("fincast", {}).get("enabled", False) and not args.no_fincast:
         raise ValueError(
             "PAN-NAN fusion requires fincast.enabled: true in the config "
-            "because PAN depends on FinCast embeddings."
+            "because PAN depends on FinCast embeddings. "
+            "Use --no-fincast to explicitly disable (not recommended)."
         )
 
     if not config.get("fusion", {}).get("enabled", False):
@@ -152,7 +183,9 @@ def main() -> None:
     decoder_train.FINCAST_AVAILABLE = FINCAST_AVAILABLE
 
     # Write updated config to temporary file if any overrides were provided
-    if args.horizons is not None or args.batch_size is not None or args.start_date is not None or args.end_date is not None:
+    if (args.horizons is not None or args.batch_size is not None or 
+        args.start_date is not None or args.end_date is not None or 
+        args.no_fincast or args.fincast):
         with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as tmp_config:
             yaml.dump(config, tmp_config)
             tmp_config_path = tmp_config.name
@@ -165,6 +198,10 @@ def main() -> None:
             overrides.append("start_date")
         if args.end_date is not None:
             overrides.append("end_date")
+        if args.no_fincast:
+            overrides.append("fincast (disabled)")
+        elif args.fincast:
+            overrides.append("fincast (enabled)")
         print(f"📝 Using temporary config with overridden {', '.join(overrides)}: {tmp_config_path}")
         config_path_to_use = tmp_config_path
     else:
