@@ -736,6 +736,11 @@ def train(
     fusion_config = config.get('fusion', {})
     use_fusion = fusion_config.get('enabled', False)
     
+    # Debug: Print config values to help diagnose issues
+    print(f"\n🔍 Config Check:")
+    print(f"   fincast.enabled: {use_fincast} (from config: {fincast_config})")
+    print(f"   fusion.enabled: {use_fusion} (from config: {fusion_config})")
+    
     # Determine architecture name based on model type
     if use_fusion and use_fincast:
         architecture_name = "PAN-NAN Fusion (Price Attention Network + Non-price Attention Network)"
