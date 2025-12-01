@@ -50,7 +50,7 @@ data:
   end_date: '2025-11-13'
   frequency: 'daily'
   lookback_window: 192
-  prediction_horizons: [28]  # 1, 2, 4 weeks ahead (daily frequency)
+  prediction_horizons: [7]  # 1, 2, 4 weeks ahead (daily frequency)
   target: 'agriculture_basket_returns'
   target_type: 'agriculture_basket'
   target_metric: 'returns'
