@@ -243,19 +243,32 @@ def log_attention_heatmaps(writer, model, val_loader, device, epoch, num_samples
     try:
         model.eval()
         
-        # Get the base model if it's wrapped (e.g., FinCast wrapper)
+        # Get the base model if it's wrapped (e.g., FinCast wrapper or PAN-NAN fusion)
         base_model = model
+        preprocess_input = None
+        
         if hasattr(model, 'decoder_transformer'):
+            # Standard decoder transformer or FinCast wrapper
             base_model = model.decoder_transformer
         elif hasattr(model, 'pan_branch') and hasattr(model.pan_branch, 'decoder_transformer'):
+            # PAN-NAN fusion model - need to preprocess input through PAN branch
             base_model = model.pan_branch.decoder_transformer
+            def preprocess_input(x_sample):
+                # Extract price, synth features like PAN branch does
+                price_series = torch.index_select(x_sample, dim=2, index=model.pan_branch.price_idx)
+                synth_features = torch.index_select(x_sample, dim=2, index=model.pan_branch.synth_idx)
+                # Use the PAN branch's augmentation method
+                augmented = model.pan_branch._augment_with_fincast(price_series, synth_features)
+                return augmented
         
         # Check if model has transformer encoder
         if not hasattr(base_model, 'transformer_encoder'):
+            print(f"  ⚠️  Base model does not have transformer_encoder")
             return
         
         # Get a few samples from validation set
         sample_count = 0
+        attention_weights_found = False
         with torch.no_grad():
             for X_batch, y_batch in val_loader:
                 if sample_count >= num_samples:
@@ -268,10 +281,17 @@ def log_attention_heatmaps(writer, model, val_loader, device, epoch, num_samples
                 for i in range(min(batch_size, num_samples - sample_count)):
                     x_sample = X_batch[i:i+1]  # [1, seq_len, features]
                     
+                    # Preprocess input if needed (for PAN-NAN fusion)
+                    if preprocess_input is not None:
+                        x_processed = preprocess_input(x_sample)
+                    else:
+                        x_processed = x_sample
+                    
                     # Extract attention weights
-                    attention_weights = _extract_attention_from_model(base_model, x_sample, device)
+                    attention_weights = _extract_attention_from_model(base_model, x_processed, device)
                     
                     if attention_weights:
+                        attention_weights_found = True
                         for layer_name, attn_weights in attention_weights.items():
                             # Handle different attention weight formats
                             if attn_weights.dim() == 4:  # [batch, heads, seq, seq]
@@ -301,8 +321,10 @@ def log_attention_heatmaps(writer, model, val_loader, device, epoch, num_samples
                 if sample_count >= num_samples:
                     break
         
-        if attention_weights:
-            print(f"  ✅ Logged attention heatmaps for {len(attention_weights)} layers")
+        if attention_weights_found:
+            print(f"  ✅ Logged attention heatmaps")
+        else:
+            print(f"  ⚠️  No attention weights extracted")
     
     except Exception as e:
         print(f"  ⚠️  Could not log attention heatmaps: {e}")
