@@ -102,7 +102,7 @@ training:
   loss_function: 'mse'
   eval_teacher_forcing: false
   early_stopping:
-    patience: 15
+    patience: 100
 
 logging:
   tensorboard: true
