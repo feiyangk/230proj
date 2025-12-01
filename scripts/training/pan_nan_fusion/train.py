@@ -85,6 +85,12 @@ def parse_args() -> argparse.Namespace:
         help="Override batch size from config. Useful for managing GPU memory (e.g., 32, 16, 8)",
     )
     parser.add_argument(
+        "--epochs",
+        type=int,
+        default=None,
+        help="Override number of training epochs from config (e.g., 50, 100)",
+    )
+    parser.add_argument(
         "--start-date",
         type=str,
         default=None,
@@ -150,6 +156,14 @@ def main() -> None:
         original_batch_size = config["training"].get("batch_size", "N/A")
         config["training"]["batch_size"] = args.batch_size
         print(f"\n📦 Overriding batch size: {original_batch_size} → {args.batch_size}")
+    
+    # Override epochs if provided via command line
+    if args.epochs is not None:
+        if "training" not in config:
+            config["training"] = {}
+        original_epochs = config["training"].get("epochs", "N/A")
+        config["training"]["epochs"] = args.epochs
+        print(f"\n⏱️  Overriding epochs: {original_epochs} → {args.epochs}")
     
     # Override date range if provided via command line
     if args.start_date is not None or args.end_date is not None:
