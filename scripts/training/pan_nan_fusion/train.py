@@ -80,6 +80,18 @@ def parse_args() -> argparse.Namespace:
         default=None,
         help="Override batch size from config. Useful for managing GPU memory (e.g., 32, 16, 8)",
     )
+    parser.add_argument(
+        "--start-date",
+        type=str,
+        default=None,
+        help="Override start date from config (format: YYYY-MM-DD, e.g., '2015-05-01' for 10 years)",
+    )
+    parser.add_argument(
+        "--end-date",
+        type=str,
+        default=None,
+        help="Override end date from config (format: YYYY-MM-DD, e.g., '2025-11-13')",
+    )
     return parser.parse_args()
 
 
@@ -107,6 +119,19 @@ def main() -> None:
         original_batch_size = config["training"].get("batch_size", "N/A")
         config["training"]["batch_size"] = args.batch_size
         print(f"\n📦 Overriding batch size: {original_batch_size} → {args.batch_size}")
+    
+    # Override date range if provided via command line
+    if args.start_date is not None or args.end_date is not None:
+        if "data" not in config:
+            config["data"] = {}
+        if args.start_date is not None:
+            original_start = config["data"].get("start_date", "N/A")
+            config["data"]["start_date"] = args.start_date
+            print(f"\n📅 Overriding start date: {original_start} → {args.start_date}")
+        if args.end_date is not None:
+            original_end = config["data"].get("end_date", "N/A")
+            config["data"]["end_date"] = args.end_date
+            print(f"\n📅 Overriding end date: {original_end} → {args.end_date}")
 
     if not config.get("fincast", {}).get("enabled", False):
         raise ValueError(
@@ -127,7 +152,7 @@ def main() -> None:
     decoder_train.FINCAST_AVAILABLE = FINCAST_AVAILABLE
 
     # Write updated config to temporary file if any overrides were provided
-    if args.horizons is not None or args.batch_size is not None:
+    if args.horizons is not None or args.batch_size is not None or args.start_date is not None or args.end_date is not None:
         with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as tmp_config:
             yaml.dump(config, tmp_config)
             tmp_config_path = tmp_config.name
@@ -136,6 +161,10 @@ def main() -> None:
             overrides.append("horizons")
         if args.batch_size is not None:
             overrides.append("batch_size")
+        if args.start_date is not None:
+            overrides.append("start_date")
+        if args.end_date is not None:
+            overrides.append("end_date")
         print(f"📝 Using temporary config with overridden {', '.join(overrides)}: {tmp_config_path}")
         config_path_to_use = tmp_config_path
     else:

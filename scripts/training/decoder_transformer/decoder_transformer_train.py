@@ -1028,6 +1028,17 @@ def train(
                 print(f"  ⚠️  ERROR logging histograms: {e}")
                 import traceback
                 traceback.print_exc()
+            
+            # Log attention heatmaps to TensorBoard
+            try:
+                tb_utils.log_attention_heatmaps(writer, model, val_loader, device, epoch, num_samples=2)
+                if writer is not None:
+                    writer.flush()
+                print(f"  ✅ Logged attention heatmaps")
+            except Exception as e:
+                print(f"  ⚠️  ERROR logging attention heatmaps: {e}")
+                import traceback
+                traceback.print_exc()
         
         print("")
         

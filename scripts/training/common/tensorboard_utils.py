@@ -5,9 +5,13 @@ TensorBoard utility functions for consistent logging across training scripts.
 
 import os
 import yaml
+import torch
+import torch.nn as nn
+import numpy as np
 from pathlib import Path
 from datetime import datetime
 from torch.utils.tensorboard import SummaryWriter
+from typing import Dict, List, Optional
 
 
 def initialize_tensorboard_writer(config, model_name, eval_suffix):
@@ -219,4 +223,150 @@ def log_hyperparameters(writer, hparams, metrics):
         for key, value in metrics.items():
             if isinstance(value, (int, float)):
                 writer.add_scalar(key, value, 0)
+
+
+def log_attention_heatmaps(writer, model, val_loader, device, epoch, num_samples=2):
+    """
+    Extract and log attention weight heatmaps to TensorBoard.
+    
+    Args:
+        writer: TensorBoard SummaryWriter
+        model: PyTorch model
+        val_loader: Validation DataLoader
+        device: Device to run on
+        epoch: Current epoch number
+        num_samples: Number of samples to visualize
+    """
+    if writer is None:
+        return
+    
+    try:
+        model.eval()
+        
+        # Get the base model if it's wrapped (e.g., FinCast wrapper)
+        base_model = model
+        if hasattr(model, 'decoder_transformer'):
+            base_model = model.decoder_transformer
+        elif hasattr(model, 'pan_branch') and hasattr(model.pan_branch, 'decoder_transformer'):
+            base_model = model.pan_branch.decoder_transformer
+        
+        # Check if model has transformer encoder
+        if not hasattr(base_model, 'transformer_encoder'):
+            return
+        
+        # Get a few samples from validation set
+        sample_count = 0
+        with torch.no_grad():
+            for X_batch, y_batch in val_loader:
+                if sample_count >= num_samples:
+                    break
+                
+                X_batch = X_batch.to(device)
+                batch_size = X_batch.shape[0]
+                
+                # Process each sample in batch
+                for i in range(min(batch_size, num_samples - sample_count)):
+                    x_sample = X_batch[i:i+1]  # [1, seq_len, features]
+                    
+                    # Extract attention weights
+                    attention_weights = _extract_attention_from_model(base_model, x_sample, device)
+                    
+                    if attention_weights:
+                        for layer_name, attn_weights in attention_weights.items():
+                            # Handle different attention weight formats
+                            if attn_weights.dim() == 4:  # [batch, heads, seq, seq]
+                                # Average over heads for cleaner visualization
+                                attn_weights = attn_weights.mean(dim=1)  # [batch, seq, seq]
+                            elif attn_weights.dim() == 3:  # [batch, seq, seq]
+                                pass  # Already in correct format
+                            
+                            # Take first (and only) batch item
+                            attn_map = attn_weights[0].cpu().numpy()  # [seq, seq]
+                            
+                            # Normalize to [0, 1] for better visualization
+                            attn_map = (attn_map - attn_map.min()) / (attn_map.max() - attn_map.min() + 1e-8)
+                            
+                            # Expand to 3D for image format [1, H, W] or [H, W, 1]
+                            # TensorBoard expects [C, H, W] format
+                            attn_map_3d = np.expand_dims(attn_map, 0)  # [1, seq, seq]
+                            
+                            # Log as image/heatmap
+                            tag = f'Attention/{layer_name}/sample_{sample_count}'
+                            writer.add_image(tag, attn_map_3d, epoch, dataformats='CHW')
+                    
+                    sample_count += 1
+                    if sample_count >= num_samples:
+                        break
+                
+                if sample_count >= num_samples:
+                    break
+        
+        if attention_weights:
+            print(f"  ✅ Logged attention heatmaps for {len(attention_weights)} layers")
+    
+    except Exception as e:
+        print(f"  ⚠️  Could not log attention heatmaps: {e}")
+        import traceback
+        traceback.print_exc()
+
+
+def _extract_attention_from_model(model, x_sample, device):
+    """
+    Helper function to extract attention weights by manually calling attention layers.
+    """
+    attention_weights = {}
+    
+    # Check if model has transformer encoder
+    if not hasattr(model, 'transformer_encoder'):
+        return attention_weights
+    
+    encoder = model.transformer_encoder
+    seq_len = x_sample.shape[1]
+    
+    # Prepare input through model's preprocessing
+    if hasattr(model, 'input_projection'):
+        x = model.input_projection(x_sample)
+        if hasattr(model, 'pos_encoder'):
+            x = model.pos_encoder(x)
+        if hasattr(model, 'dropout_layer'):
+            x = model.dropout_layer(x)
+    else:
+        x = x_sample
+    
+    # Get mask
+    mask = None
+    if hasattr(model, 'causal_mask'):
+        mask = model.causal_mask[:seq_len, :seq_len]
+    
+    # Extract attention from each layer by manually calling attention
+    x_temp = x
+    for layer_idx, layer in enumerate(encoder.layers):
+        if hasattr(layer, 'self_attn'):
+            try:
+                # Apply layer norm if present (pre-norm architecture)
+                if hasattr(layer, 'norm1'):
+                    x_norm = layer.norm1(x_temp)
+                else:
+                    x_norm = x_temp
+                
+                # Call attention directly with need_weights=True
+                # MultiheadAttention returns (attn_output, attn_output_weights)
+                _, attn_weights = layer.self_attn(
+                    x_norm, x_norm, x_norm,
+                    need_weights=True,
+                    attn_mask=mask if mask is not None else None
+                )
+                
+                if attn_weights is not None:
+                    attention_weights[f'layer_{layer_idx}'] = attn_weights
+                
+                # Continue through layer to get input for next layer
+                # This is needed to get the correct input for subsequent layers
+                x_temp = layer(x_temp, src_mask=mask)
+                
+            except Exception as e:
+                # If direct call fails, skip this layer
+                continue
+    
+    return attention_weights
 
