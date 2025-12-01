@@ -74,6 +74,12 @@ def parse_args() -> argparse.Namespace:
         default=None,
         help="Override prediction horizons from config. Comma-separated list of integers (e.g., '4,8,16')",
     )
+    parser.add_argument(
+        "--batch-size",
+        type=int,
+        default=None,
+        help="Override batch size from config. Useful for managing GPU memory (e.g., 32, 16, 8)",
+    )
     return parser.parse_args()
 
 
@@ -93,6 +99,14 @@ def main() -> None:
             config["data"] = {}
         config["data"]["prediction_horizons"] = args.horizons
         print(f"\n📊 Overriding prediction horizons: {args.horizons}")
+    
+    # Override batch size if provided via command line
+    if args.batch_size is not None:
+        if "training" not in config:
+            config["training"] = {}
+        original_batch_size = config["training"].get("batch_size", "N/A")
+        config["training"]["batch_size"] = args.batch_size
+        print(f"\n📦 Overriding batch size: {original_batch_size} → {args.batch_size}")
 
     if not config.get("fincast", {}).get("enabled", False):
         raise ValueError(
@@ -112,12 +126,17 @@ def main() -> None:
     decoder_train.DecoderTransformerWithFinCast = FusionDecoderTransformer
     decoder_train.FINCAST_AVAILABLE = FINCAST_AVAILABLE
 
-    # Write updated config to temporary file if horizons were overridden
-    if args.horizons is not None:
+    # Write updated config to temporary file if any overrides were provided
+    if args.horizons is not None or args.batch_size is not None:
         with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as tmp_config:
             yaml.dump(config, tmp_config)
             tmp_config_path = tmp_config.name
-        print(f"📝 Using temporary config with overridden horizons: {tmp_config_path}")
+        overrides = []
+        if args.horizons is not None:
+            overrides.append("horizons")
+        if args.batch_size is not None:
+            overrides.append("batch_size")
+        print(f"📝 Using temporary config with overridden {', '.join(overrides)}: {tmp_config_path}")
         config_path_to_use = tmp_config_path
     else:
         config_path_to_use = str(config_path)
