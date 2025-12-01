@@ -35,8 +35,9 @@ def initialize_tensorboard_writer(config, model_name, eval_suffix):
     try:
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         
-        # Check for Vertex AI TensorBoard directory (set automatically by Vertex AI)
+        # Check for managed TensorBoard directories
         tensorboard_log_dir = os.getenv('AIP_TENSORBOARD_LOG_DIR')
+        sm_tensorboard_base = os.getenv('SM_OUTPUT_DATA_DIR')
         
         if tensorboard_log_dir:
             # Vertex AI managed TensorBoard - logs auto-sync
@@ -44,6 +45,13 @@ def initialize_tensorboard_writer(config, model_name, eval_suffix):
             writer = SummaryWriter(str(log_dir))
             print(f"\n📊 TensorBoard (Vertex AI): {log_dir}")
             print(f"   Logs will auto-sync to TensorBoard instance")
+        elif sm_tensorboard_base:
+            base_log_dir = Path(sm_tensorboard_base) / 'tensorboard'
+            log_dir = base_log_dir / f"{model_name}{eval_suffix}" / timestamp
+            log_dir.mkdir(parents=True, exist_ok=True)
+            writer = SummaryWriter(str(log_dir))
+            print(f"\n📊 TensorBoard logs (SageMaker) → {log_dir}")
+            print(f"   These logs will be available in the SageMaker trial artifacts")
         else:
             # Local or manual TensorBoard - use local paths
             base_log_dir = Path(config.get('logging', {}).get('log_dir', 'logs/tensorboard'))

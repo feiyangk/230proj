@@ -125,6 +125,18 @@ def parse_args() -> argparse.Namespace:
         help="Name for this training run (used in checkpoint filename). If not provided, uses timestamp",
     )
     parser.add_argument(
+        "--data-dir",
+        type=str,
+        default=None,
+        help="Path to processed data directory (defaults to data/processed or SageMaker channel)",
+    )
+    parser.add_argument(
+        "--model-dir",
+        type=str,
+        default=None,
+        help="Directory to save checkpoints (defaults to models/... or SageMaker model dir)",
+    )
+    parser.add_argument(
         "--force-refresh",
         action="store_true",
         help="Force regenerate data from BigQuery (ignore cached data/processed/). Use this when changing horizons or other data config.",
@@ -248,7 +260,9 @@ def main() -> None:
         seed=args.seed,
         checkpoint_path=args.resume,
         run_name=args.run_name,
-        force_refresh=args.force_refresh
+        force_refresh=args.force_refresh,
+        data_dir=args.data_dir,
+        model_dir=args.model_dir
     )
 
 

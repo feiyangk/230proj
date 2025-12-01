@@ -555,7 +555,9 @@ def train(
     seed: Optional[int] = None,
     checkpoint_path: Optional[str] = None,
     run_name: Optional[str] = None,
-    force_refresh: bool = False
+    force_refresh: bool = False,
+    data_dir: Optional[str] = None,
+    model_dir: Optional[str] = None
 ):
     """
     Core decoder transformer training function.
@@ -568,6 +570,8 @@ def train(
         checkpoint_path: Optional path to checkpoint file to resume training from. If None, trains from scratch.
         run_name: Optional name for this training run (used in checkpoint filename). If None, uses timestamp.
         force_refresh: If True, warns about horizon mismatches. Note: To actually regenerate data, run the data loader script separately.
+        data_dir: Optional path to processed data directory. Defaults to data/processed or SageMaker's training channel.
+        model_dir: Optional directory to save checkpoints. Defaults to models/... or SageMaker model directory.
         
     Note:
         FinCast configuration is now read from the config YAML file under the 'fincast' section.
@@ -588,13 +592,19 @@ def train(
     with open(config_path, 'r') as f:
         config = yaml.safe_load(f)
     
+    resolved_data_dir = Path(
+        data_dir
+        or os.environ.get('SM_CHANNEL_TRAIN')
+        or 'data/processed'
+    )
+    
     # Load data if not provided
     if dataloaders is None:
-        print("\n📂 Loading data from data/processed/...")
+        print(f"\n📂 Loading data from {resolved_data_dir} ...")
         from torch.utils.data import TensorDataset, DataLoader
         
         # Load preprocessed data directly from .npy files
-        data_dir = Path('data/processed')
+        data_dir = resolved_data_dir
         
         # Check if cached data horizons match config horizons
         if not force_refresh:
@@ -674,8 +684,14 @@ def train(
     if run_name is None:
         run_name = datetime.now().strftime('%Y%m%d_%H%M%S')
     
-    # Setup output directory
-    output_dir = Path(f'models/{model_name}')
+    # Setup output directory (local or managed environment)
+    sm_model_dir = os.environ.get('SM_MODEL_DIR')
+    if model_dir:
+        output_dir = Path(model_dir)
+    elif sm_model_dir:
+        output_dir = Path(sm_model_dir)
+    else:
+        output_dir = Path('models') / model_name
     output_dir.mkdir(parents=True, exist_ok=True)
     
     print(f"\n📝 Run name: {run_name}")
@@ -718,7 +734,7 @@ def train(
         
         # Try to get total samples from metadata
         try:
-            metadata_path = Path('data/processed/metadata.yaml')
+            metadata_path = resolved_data_dir / 'metadata.yaml'
             if metadata_path.exists():
                 with open(metadata_path, 'r') as f:
                     metadata = yaml.safe_load(f)
@@ -733,7 +749,7 @@ def train(
     
     # Load feature metadata if available
     try:
-        metadata_path = Path('data/processed/metadata.yaml')
+        metadata_path = resolved_data_dir / 'metadata.yaml'
         if metadata_path.exists():
             with open(metadata_path, 'r') as f:
                 metadata = yaml.safe_load(f)
@@ -910,7 +926,7 @@ def train(
     test_samples = 0
     
     try:
-        metadata_path = Path('data/processed/metadata.yaml')
+        metadata_path = resolved_data_dir / 'metadata.yaml'
         if metadata_path.exists():
             with open(metadata_path, 'r') as f:
                 metadata = yaml.safe_load(f)
