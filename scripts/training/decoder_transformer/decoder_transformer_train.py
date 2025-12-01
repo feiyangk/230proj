@@ -642,8 +642,13 @@ def train(
         val_loader = dataloaders['val']
         test_loader = dataloaders['test']
     
+    # Determine model type for output directory and checkpoint naming
+    fusion_config = config.get('fusion', {})
+    use_fusion = fusion_config.get('enabled', False)
+    model_name = 'pan_nan' if use_fusion else 'decoder_transformer'
+    
     # Setup output directory
-    output_dir = Path('models/decoder_transformer')
+    output_dir = Path(f'models/{model_name}')
     output_dir.mkdir(parents=True, exist_ok=True)
     
     # Setup device
@@ -930,7 +935,7 @@ def train(
     training_start_time = time.time()
     
     # Check for existing checkpoint to resume from
-    checkpoint_path = output_dir / f'decoder_transformer_best{eval_suffix}.pt'
+    checkpoint_path = output_dir / f'{model_name}_best{eval_suffix}.pt'
     start_epoch = 0
     if checkpoint_path.exists():
         try:
@@ -1056,7 +1061,7 @@ def train(
             # Save checkpoint with all metrics
             # Include eval mode in filename to differentiate models
             eval_suffix = "_tf" if use_teacher_forcing_eval else "_ar"
-            checkpoint_path = output_dir / f'decoder_transformer_best{eval_suffix}.pt'
+            checkpoint_path = output_dir / f'{model_name}_best{eval_suffix}.pt'
             torch.save({
                 'epoch': epoch,
                 'model_state_dict': model.state_dict(),
@@ -1082,7 +1087,7 @@ def train(
     
     # Load best model
     eval_suffix = "_tf" if use_teacher_forcing_eval else "_ar"
-    checkpoint_path = output_dir / f'decoder_transformer_best{eval_suffix}.pt'
+    checkpoint_path = output_dir / f'{model_name}_best{eval_suffix}.pt'
     if checkpoint_path.exists():
         checkpoint = torch.load(checkpoint_path, map_location=device, weights_only=False)
         model.load_state_dict(checkpoint['model_state_dict'])
