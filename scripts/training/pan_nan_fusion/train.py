@@ -28,9 +28,10 @@ from scripts.training.pan_nan_fusion.model import (
 def parse_horizons(horizons_str: str) -> list:
     """
     Parse horizons from comma-separated string.
+    Supports single horizon (e.g., "4") or multiple horizons (e.g., "4,8,16").
     
     Args:
-        horizons_str: Comma-separated string of integers (e.g., "4,8,16")
+        horizons_str: Comma-separated string of integers (e.g., "4" or "4,8,16")
     
     Returns:
         List of integers
@@ -43,7 +44,10 @@ def parse_horizons(horizons_str: str) -> list:
             raise ValueError("All horizons must be positive integers")
         return horizons
     except ValueError as e:
-        raise argparse.ArgumentTypeError(f"Invalid horizons format: {e}. Expected comma-separated integers (e.g., '4,8,16')")
+        raise argparse.ArgumentTypeError(
+            f"Invalid horizons format: {e}. "
+            f"Expected comma-separated integers (e.g., '4' for single horizon or '4,8,16' for multiple)"
+        )
 
 
 def parse_args() -> argparse.Namespace:
@@ -72,7 +76,7 @@ def parse_args() -> argparse.Namespace:
         "--horizons",
         type=parse_horizons,
         default=None,
-        help="Override prediction horizons from config. Comma-separated list of integers (e.g., '4,8,16')",
+        help="Override prediction horizons from config. Comma-separated list of integers. Supports single horizon (e.g., '4') or multiple horizons (e.g., '4,8,16')",
     )
     parser.add_argument(
         "--batch-size",
