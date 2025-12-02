@@ -305,17 +305,37 @@ def log_attention_heatmaps(writer, model, val_loader, device, epoch, num_samples
                         attn_map = attn_tensor[0].cpu().numpy()
                         if attn_map.size == 0 or np.isnan(attn_map).all():
                             return
-                        attn_min = attn_map.min()
-                        attn_max = attn_map.max()
-                        attn_range = attn_max - attn_min
+                        
+                        # Percentile-based normalization to highlight subtle differences
+                        # Use 1st and 99th percentiles to clip outliers and show distribution
+                        attn_min_raw = attn_map.min()
+                        attn_max_raw = attn_map.max()
+                        attn_p1 = np.percentile(attn_map, 1)  # 1st percentile
+                        attn_p99 = np.percentile(attn_map, 99)  # 99th percentile
+                        attn_median = np.median(attn_map)
+                        attn_std = attn_map.std()
+                        
+                        # Normalize using percentile range
+                        attn_range = attn_p99 - attn_p1
                         if attn_range < 1e-8:
-                            attn_map_norm = np.ones_like(attn_map) * 0.5
+                            # If range is too small, use median-centered normalization with std
+                            if attn_std < 1e-8:
+                                attn_map_norm = np.ones_like(attn_map) * 0.5
+                            else:
+                                # Use std-based normalization centered at median
+                                attn_map_norm = (attn_map - attn_median) / (3 * attn_std) + 0.5
+                                attn_map_norm = np.clip(attn_map_norm, 0, 1)
                         else:
-                            attn_map_norm = (attn_map - attn_min) / attn_range
+                            # Percentile-based normalization: clip to [p1, p99], then normalize to [0, 1]
+                            attn_map_clipped = np.clip(attn_map, attn_p1, attn_p99)
+                            attn_map_norm = (attn_map_clipped - attn_p1) / attn_range
+                        
                         fig, ax = plt.subplots(figsize=(10, 10))
-                        im = ax.imshow(attn_map_norm, cmap='viridis', aspect='auto', origin='upper')
+                        im = ax.imshow(attn_map_norm, cmap='viridis', aspect='auto', origin='upper', vmin=0, vmax=1)
                         title = f'Attention Weights - {layer_name} ({head_label}) - Sample {sample_idx+1}\n'
-                        title += f'Range: [{attn_min:.4f}, {attn_max:.4f}]'
+                        title += f'Raw: [{attn_min_raw:.4f}, {attn_max_raw:.4f}] | '
+                        title += f'P1-P99: [{attn_p1:.4f}, {attn_p99:.4f}] | '
+                        title += f'Median: {attn_median:.4f}, Std: {attn_std:.4f}'
                         ax.set_title(title)
                         ax.set_xlabel('Key Position (attended to)')
                         ax.set_ylabel('Query Position (attending from)')
