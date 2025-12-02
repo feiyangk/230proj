@@ -14,15 +14,29 @@ import re
 
 def extract_val_loss_from_log(log_file):
     """Extract best validation loss from log file."""
-    if not Path(log_file).exists():
-        return None, None
+    # Try multiple possible locations
+    possible_paths = [
+        log_file,
+        Path(log_file),
+        Path(".") / log_file,
+        Path("nohup.out"),
+    ]
+    
+    log_path = None
+    for path in possible_paths:
+        if Path(path).exists():
+            log_path = path
+            break
+    
+    if log_path is None:
+        return None, f"Log file not found: {log_file}"
     
     best_val_loss = float('inf')
     best_epoch = 0
     epoch = 0
     
     try:
-        with open(log_file, 'r') as f:
+        with open(log_path, 'r') as f:
             for line in f:
                 # Track epoch number
                 if "Epoch" in line and "/" in line:
@@ -66,7 +80,20 @@ def inspect_results(results_file):
         run_name = result.get('run_name', f"lr_search_{lr:.2e}")
         log_file = result.get('log_file', f"training_{run_name}.log")
         
+        # Also try to find TensorBoard logs
         val_loss, error = extract_val_loss_from_log(log_file)
+        
+        # If log file not found, try to extract from TensorBoard or checkpoints
+        if val_loss is None:
+            # Try to find in TensorBoard logs
+            tb_dir = Path("logs/tensorboard")
+            if tb_dir.exists():
+                # Look for run directories matching this LR
+                for run_dir in tb_dir.rglob(f"*{run_name}*"):
+                    events_file = list(run_dir.glob("events.out.tfevents.*"))
+                    if events_file:
+                        # TensorBoard parsing would go here, but for now just note it exists
+                        error = f"TensorBoard log found at {run_dir}, but parsing not implemented"
         
         enriched = result.copy()
         enriched['val_loss'] = val_loss
