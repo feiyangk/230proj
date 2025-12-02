@@ -851,6 +851,12 @@ def train(
         if use_fusion:
             # When fusion is enabled, DecoderTransformerWithFinCast is swapped with FusionDecoderTransformer
             # which accepts fusion_config parameter
+            # Debug: Print actual config values being used
+            print(f"\n🔍 Model Config Values (for debugging):")
+            print(f"   model.d_model: {config['model'].get('d_model')}")
+            print(f"   model.d_ff: {config['model'].get('d_ff')}")
+            print(f"   fusion.sentiment_hidden_dim: {fusion_config.get('sentiment_hidden_dim')}")
+            print(f"   fusion.fusion_hidden_dim: {fusion_config.get('fusion_hidden_dim')}")
             model = DecoderTransformerWithFinCast(
                 config=config,
                 num_features=num_features,

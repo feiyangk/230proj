@@ -153,6 +153,14 @@ def main() -> None:
 
     with config_path.open("r") as f:
         config = yaml.safe_load(f)
+    
+    # Debug: Print dimension values from loaded config to verify they're preserved
+    if 'model' in config and 'fusion' in config:
+        print(f"\n🔍 Loaded config dimensions from {config_path}:")
+        print(f"   d_model: {config['model'].get('d_model')}, "
+              f"d_ff: {config['model'].get('d_ff')}, "
+              f"sentiment_hidden: {config['fusion'].get('sentiment_hidden_dim')}, "
+              f"fusion_hidden: {config['fusion'].get('fusion_hidden_dim')}")
 
     # Override prediction horizons if provided via command line
     if args.horizons is not None:
@@ -250,6 +258,12 @@ def main() -> None:
         elif args.fincast:
             overrides.append("fincast (enabled)")
         print(f"📝 Using temporary config with overridden {', '.join(overrides)}: {tmp_config_path}")
+        # Debug: Print dimension values to verify they're preserved
+        if 'model' in config and 'fusion' in config:
+            print(f"🔍 Config dimensions - d_model: {config['model'].get('d_model')}, "
+                  f"d_ff: {config['model'].get('d_ff')}, "
+                  f"sentiment_hidden: {config['fusion'].get('sentiment_hidden_dim')}, "
+                  f"fusion_hidden: {config['fusion'].get('fusion_hidden_dim')}")
         config_path_to_use = tmp_config_path
     else:
         config_path_to_use = str(config_path)
