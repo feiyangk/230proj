@@ -50,7 +50,7 @@ data:
   end_date: '2025-11-13'
   frequency: 'daily'
   lookback_window: 192
-  prediction_horizons: [28]  # 1, 2, 4 weeks ahead (daily frequency)
+  prediction_horizons: [7]  # 1, 2, 4 weeks ahead (daily frequency)
   target: 'agriculture_basket_returns'
   target_type: 'agriculture_basket'
   target_metric: 'returns'
@@ -95,7 +95,7 @@ model:
 training:
   batch_size: 64
   epochs: 100
-  learning_rate: 0.00005
+  learning_rate: 0.00005  
   optimizer: 'adam'
   weight_decay: 0.02
   gradient_clip_norm: 1.0
