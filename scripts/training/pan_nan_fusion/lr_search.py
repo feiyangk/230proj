@@ -16,19 +16,22 @@ from pathlib import Path
 from datetime import datetime
 import numpy as np
 
-def run_training(config_path, learning_rate, run_name, epochs=50, seed=42):
+def run_training(config_path, learning_rate, run_name, epochs=50, seed=42, extra_args=None):
     """Run training with a specific learning rate."""
     cmd = [
         "python", "scripts/training/pan_nan_fusion/train.py",
         "--config", config_path,
         "--seed", str(seed),
-        "--download-fincast",
-        "--horizons", "7,14,28",
         "--run-name", run_name,
     ]
     
-    # Override learning rate by modifying config temporarily
-    # Or pass via environment variable if supported
+    # Add extra arguments if provided
+    if extra_args:
+        cmd.extend(extra_args)
+    
+    # Add epochs if specified
+    if epochs:
+        cmd.extend(["--epochs", str(epochs)])
     
     result = subprocess.run(cmd, capture_output=True, text=True)
     return result
@@ -55,7 +58,7 @@ def extract_metrics(log_file):
     
     return best_val_loss, best_epoch
 
-def grid_search(config_path, learning_rates, epochs=50, seed=42):
+def grid_search(config_path, learning_rates, epochs=50, seed=42, extra_args=None):
     """Grid search over learning rates."""
     results = []
     
@@ -65,6 +68,8 @@ def grid_search(config_path, learning_rates, epochs=50, seed=42):
     print(f"Testing {len(learning_rates)} learning rates")
     print(f"Learning rates: {learning_rates}")
     print(f"Epochs per run: {epochs}")
+    if extra_args:
+        print(f"Extra args: {' '.join(extra_args)}")
     print("="*80)
     
     for i, lr in enumerate(learning_rates):
@@ -86,7 +91,7 @@ def grid_search(config_path, learning_rates, epochs=50, seed=42):
         
         try:
             # Run training
-            result = run_training(temp_config, lr, run_name, epochs, seed)
+            result = run_training(temp_config, lr, run_name, epochs, seed, extra_args)
             
             # Extract metrics (you'll need to parse from logs or checkpoints)
             # For now, we'll just track if it completed
@@ -115,7 +120,7 @@ def grid_search(config_path, learning_rates, epochs=50, seed=42):
     
     return results
 
-def learning_rate_finder(config_path, min_lr=1e-6, max_lr=1e-2, num_trials=10, epochs=20):
+def learning_rate_finder(config_path, min_lr=1e-6, max_lr=1e-2, num_trials=10, epochs=20, seed=42, extra_args=None):
     """Learning rate finder - exponential range search."""
     # Generate learning rates on log scale
     learning_rates = np.logspace(np.log10(min_lr), np.log10(max_lr), num_trials)
@@ -126,12 +131,18 @@ def learning_rate_finder(config_path, min_lr=1e-6, max_lr=1e-2, num_trials=10, e
     print(f"Range: {min_lr:.2e} to {max_lr:.2e}")
     print(f"Trials: {num_trials}")
     print(f"Epochs per trial: {epochs}")
+    if extra_args:
+        print(f"Extra args: {' '.join(extra_args)}")
     print("="*80)
     
-    return grid_search(config_path, learning_rates.tolist(), epochs=epochs)
+    return grid_search(config_path, learning_rates.tolist(), epochs=epochs, seed=seed, extra_args=extra_args)
 
 def main():
-    parser = argparse.ArgumentParser(description='Learning rate search for PAN-NAN fusion')
+    parser = argparse.ArgumentParser(
+        description='Learning rate search for PAN-NAN fusion',
+        # Allow unknown arguments to be passed through
+        allow_abbrev=False
+    )
     parser.add_argument('--config', type=str, default='configs/model_pan_nan_fusion.yaml',
                        help='Config file path')
     parser.add_argument('--method', type=str, choices=['grid', 'finder', 'custom'],
@@ -153,7 +164,13 @@ def main():
     parser.add_argument('--num-trials', type=int, default=10,
                        help='Number of trials for finder')
     
-    args = parser.parse_args()
+    # Parse known args, leave unknown args for pass-through
+    args, extra_args = parser.parse_known_args()
+    
+    # Print extra args that will be passed through
+    if extra_args:
+        print(f"\n📋 Extra arguments to pass through: {' '.join(extra_args)}")
+        print("   (e.g., --no-fincast, --fincast, --download-fincast, --horizons, etc.)\n")
     
     if args.method == 'grid':
         if args.lrs:
@@ -171,11 +188,11 @@ def main():
                 5e-4,   # Very large
             ]
         
-        results = grid_search(args.config, learning_rates, args.epochs, args.seed)
+        results = grid_search(args.config, learning_rates, args.epochs, args.seed, extra_args)
     
     elif args.method == 'finder':
         results = learning_rate_finder(
-            args.config, args.min_lr, args.max_lr, args.num_trials, args.epochs
+            args.config, args.min_lr, args.max_lr, args.num_trials, args.epochs, args.seed, extra_args
         )
     
     # Save results
