@@ -1,0 +1,1322 @@
+
+📋 Extra arguments to pass through: --no-fincast --horizons 7,14,28
+   (e.g., --no-fincast, --fincast, --download-fincast, --horizons, etc.)
+
+================================================================================
+Dimension Grid Search
+================================================================================
+Total combinations: 27
+d_model values: [64, 96, 128]
+d_ff: 4x d_model (tied)
+sentiment_hidden_dim values: [32, 64, 128]
+fusion_hidden_dim values: [64, 128, 256]
+Epochs per run: 30
+Extra args: --no-fincast --horizons 7,14,28
+================================================================================
+
+[1/27] Testing dimensions:
+  d_model: 64, d_ff: 256, sent_hidden: 32, fusion_hidden: 64
+  Run name: dim_64_256_32_64
+  🚀 Starting training...
+
+✅ TensorBoard utilities loaded from: /Users/kuangfy/Desktop/230/230proj/scripts/training/common/tensorboard_utils.py
+❌ FinCast import failed: FinCast submodule not found at: /Users/kuangfy/Desktop/230/230proj/external/fincast/src
+
+ℹ️  To use FinCast, follow setup instructions in scripts/03_training/README.md
+   Or set fincast.enabled: false in your config to disable FinCast.
+
+
+📊 Overriding prediction horizons: [7, 14, 28]
+
+⏱️  Overriding epochs: 100 → 30
+
+🔧 Overriding FinCast: True → False (disabled)
+   ⚠️  WARNING: PAN-NAN fusion typically requires FinCast for the PAN branch.
+   ⚠️  Training may fail or produce poor results without FinCast.
+📝 Using temporary config with overridden horizons, fincast (disabled): /var/folders/t3/7n146c0j1bj7_m93fvlpwgtm0000gn/T/tmpnx_tgar8.yaml
+
+🌱 Setting random seed: 42
+   ✅ Random seed set for PyTorch, NumPy, and Python random module
+
+📂 Loading data from data/processed ...
+Traceback (most recent call last):
+  File "/Users/kuangfy/Desktop/230/230proj/scripts/training/pan_nan_fusion/train.py", line 302, in <module>
+    main()
+    ~~~~^^
+  File "/Users/kuangfy/Desktop/230/230proj/scripts/training/pan_nan_fusion/train.py", line 258, in main
+    decoder_train.train(
+    ~~~~~~~~~~~~~~~~~~~^
+        config_path=config_path_to_use,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<5 lines>...
+        model_dir=args.model_dir
+        ^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/kuangfy/Desktop/230/230proj/scripts/training/decoder_transformer/decoder_transformer_train.py", line 626, in train
+    train_X_np = np.load(data_dir / 'X_train.npy', allow_pickle=True)
+  File "/Users/kuangfy/miniconda3/lib/python3.13/site-packages/numpy/lib/_npyio_impl.py", line 454, in load
+    fid = stack.enter_context(open(os.fspath(file), "rb"))
+                              ~~~~^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: 'data/processed/X_train.npy'
+
+  ❌ Completed
+
+[2/27] Testing dimensions:
+  d_model: 64, d_ff: 256, sent_hidden: 32, fusion_hidden: 128
+  Run name: dim_64_256_32_128
+  🚀 Starting training...
+
+✅ TensorBoard utilities loaded from: /Users/kuangfy/Desktop/230/230proj/scripts/training/common/tensorboard_utils.py
+❌ FinCast import failed: FinCast submodule not found at: /Users/kuangfy/Desktop/230/230proj/external/fincast/src
+
+ℹ️  To use FinCast, follow setup instructions in scripts/03_training/README.md
+   Or set fincast.enabled: false in your config to disable FinCast.
+
+
+📊 Overriding prediction horizons: [7, 14, 28]
+
+⏱️  Overriding epochs: 100 → 30
+
+🔧 Overriding FinCast: True → False (disabled)
+   ⚠️  WARNING: PAN-NAN fusion typically requires FinCast for the PAN branch.
+   ⚠️  Training may fail or produce poor results without FinCast.
+📝 Using temporary config with overridden horizons, fincast (disabled): /var/folders/t3/7n146c0j1bj7_m93fvlpwgtm0000gn/T/tmppntplesk.yaml
+
+🌱 Setting random seed: 42
+   ✅ Random seed set for PyTorch, NumPy, and Python random module
+
+📂 Loading data from data/processed ...
+Traceback (most recent call last):
+  File "/Users/kuangfy/Desktop/230/230proj/scripts/training/pan_nan_fusion/train.py", line 302, in <module>
+    main()
+    ~~~~^^
+  File "/Users/kuangfy/Desktop/230/230proj/scripts/training/pan_nan_fusion/train.py", line 258, in main
+    decoder_train.train(
+    ~~~~~~~~~~~~~~~~~~~^
+        config_path=config_path_to_use,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<5 lines>...
+        model_dir=args.model_dir
+        ^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/kuangfy/Desktop/230/230proj/scripts/training/decoder_transformer/decoder_transformer_train.py", line 626, in train
+    train_X_np = np.load(data_dir / 'X_train.npy', allow_pickle=True)
+  File "/Users/kuangfy/miniconda3/lib/python3.13/site-packages/numpy/lib/_npyio_impl.py", line 454, in load
+    fid = stack.enter_context(open(os.fspath(file), "rb"))
+                              ~~~~^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: 'data/processed/X_train.npy'
+
+  ❌ Completed
+
+[3/27] Testing dimensions:
+  d_model: 64, d_ff: 256, sent_hidden: 32, fusion_hidden: 256
+  Run name: dim_64_256_32_256
+  🚀 Starting training...
+
+✅ TensorBoard utilities loaded from: /Users/kuangfy/Desktop/230/230proj/scripts/training/common/tensorboard_utils.py
+❌ FinCast import failed: FinCast submodule not found at: /Users/kuangfy/Desktop/230/230proj/external/fincast/src
+
+ℹ️  To use FinCast, follow setup instructions in scripts/03_training/README.md
+   Or set fincast.enabled: false in your config to disable FinCast.
+
+
+📊 Overriding prediction horizons: [7, 14, 28]
+
+⏱️  Overriding epochs: 100 → 30
+
+🔧 Overriding FinCast: True → False (disabled)
+   ⚠️  WARNING: PAN-NAN fusion typically requires FinCast for the PAN branch.
+   ⚠️  Training may fail or produce poor results without FinCast.
+📝 Using temporary config with overridden horizons, fincast (disabled): /var/folders/t3/7n146c0j1bj7_m93fvlpwgtm0000gn/T/tmpi6aqv5ln.yaml
+
+🌱 Setting random seed: 42
+   ✅ Random seed set for PyTorch, NumPy, and Python random module
+
+📂 Loading data from data/processed ...
+Traceback (most recent call last):
+  File "/Users/kuangfy/Desktop/230/230proj/scripts/training/pan_nan_fusion/train.py", line 302, in <module>
+    main()
+    ~~~~^^
+  File "/Users/kuangfy/Desktop/230/230proj/scripts/training/pan_nan_fusion/train.py", line 258, in main
+    decoder_train.train(
+    ~~~~~~~~~~~~~~~~~~~^
+        config_path=config_path_to_use,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<5 lines>...
+        model_dir=args.model_dir
+        ^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/kuangfy/Desktop/230/230proj/scripts/training/decoder_transformer/decoder_transformer_train.py", line 626, in train
+    train_X_np = np.load(data_dir / 'X_train.npy', allow_pickle=True)
+  File "/Users/kuangfy/miniconda3/lib/python3.13/site-packages/numpy/lib/_npyio_impl.py", line 454, in load
+    fid = stack.enter_context(open(os.fspath(file), "rb"))
+                              ~~~~^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: 'data/processed/X_train.npy'
+
+  ❌ Completed
+
+[4/27] Testing dimensions:
+  d_model: 64, d_ff: 256, sent_hidden: 64, fusion_hidden: 64
+  Run name: dim_64_256_64_64
+  🚀 Starting training...
+
+✅ TensorBoard utilities loaded from: /Users/kuangfy/Desktop/230/230proj/scripts/training/common/tensorboard_utils.py
+❌ FinCast import failed: FinCast submodule not found at: /Users/kuangfy/Desktop/230/230proj/external/fincast/src
+
+ℹ️  To use FinCast, follow setup instructions in scripts/03_training/README.md
+   Or set fincast.enabled: false in your config to disable FinCast.
+
+
+📊 Overriding prediction horizons: [7, 14, 28]
+
+⏱️  Overriding epochs: 100 → 30
+
+🔧 Overriding FinCast: True → False (disabled)
+   ⚠️  WARNING: PAN-NAN fusion typically requires FinCast for the PAN branch.
+   ⚠️  Training may fail or produce poor results without FinCast.
+📝 Using temporary config with overridden horizons, fincast (disabled): /var/folders/t3/7n146c0j1bj7_m93fvlpwgtm0000gn/T/tmp1da1s4d4.yaml
+
+🌱 Setting random seed: 42
+   ✅ Random seed set for PyTorch, NumPy, and Python random module
+
+📂 Loading data from data/processed ...
+Traceback (most recent call last):
+  File "/Users/kuangfy/Desktop/230/230proj/scripts/training/pan_nan_fusion/train.py", line 302, in <module>
+    main()
+    ~~~~^^
+  File "/Users/kuangfy/Desktop/230/230proj/scripts/training/pan_nan_fusion/train.py", line 258, in main
+    decoder_train.train(
+    ~~~~~~~~~~~~~~~~~~~^
+        config_path=config_path_to_use,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<5 lines>...
+        model_dir=args.model_dir
+        ^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/kuangfy/Desktop/230/230proj/scripts/training/decoder_transformer/decoder_transformer_train.py", line 626, in train
+    train_X_np = np.load(data_dir / 'X_train.npy', allow_pickle=True)
+  File "/Users/kuangfy/miniconda3/lib/python3.13/site-packages/numpy/lib/_npyio_impl.py", line 454, in load
+    fid = stack.enter_context(open(os.fspath(file), "rb"))
+                              ~~~~^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: 'data/processed/X_train.npy'
+
+  ❌ Completed
+
+[5/27] Testing dimensions:
+  d_model: 64, d_ff: 256, sent_hidden: 64, fusion_hidden: 128
+  Run name: dim_64_256_64_128
+  🚀 Starting training...
+
+✅ TensorBoard utilities loaded from: /Users/kuangfy/Desktop/230/230proj/scripts/training/common/tensorboard_utils.py
+❌ FinCast import failed: FinCast submodule not found at: /Users/kuangfy/Desktop/230/230proj/external/fincast/src
+
+ℹ️  To use FinCast, follow setup instructions in scripts/03_training/README.md
+   Or set fincast.enabled: false in your config to disable FinCast.
+
+
+📊 Overriding prediction horizons: [7, 14, 28]
+
+⏱️  Overriding epochs: 100 → 30
+
+🔧 Overriding FinCast: True → False (disabled)
+   ⚠️  WARNING: PAN-NAN fusion typically requires FinCast for the PAN branch.
+   ⚠️  Training may fail or produce poor results without FinCast.
+📝 Using temporary config with overridden horizons, fincast (disabled): /var/folders/t3/7n146c0j1bj7_m93fvlpwgtm0000gn/T/tmpe1nsdd0k.yaml
+
+🌱 Setting random seed: 42
+   ✅ Random seed set for PyTorch, NumPy, and Python random module
+
+📂 Loading data from data/processed ...
+Traceback (most recent call last):
+  File "/Users/kuangfy/Desktop/230/230proj/scripts/training/pan_nan_fusion/train.py", line 302, in <module>
+    main()
+    ~~~~^^
+  File "/Users/kuangfy/Desktop/230/230proj/scripts/training/pan_nan_fusion/train.py", line 258, in main
+    decoder_train.train(
+    ~~~~~~~~~~~~~~~~~~~^
+        config_path=config_path_to_use,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<5 lines>...
+        model_dir=args.model_dir
+        ^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/kuangfy/Desktop/230/230proj/scripts/training/decoder_transformer/decoder_transformer_train.py", line 626, in train
+    train_X_np = np.load(data_dir / 'X_train.npy', allow_pickle=True)
+  File "/Users/kuangfy/miniconda3/lib/python3.13/site-packages/numpy/lib/_npyio_impl.py", line 454, in load
+    fid = stack.enter_context(open(os.fspath(file), "rb"))
+                              ~~~~^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: 'data/processed/X_train.npy'
+
+  ❌ Completed
+
+[6/27] Testing dimensions:
+  d_model: 64, d_ff: 256, sent_hidden: 64, fusion_hidden: 256
+  Run name: dim_64_256_64_256
+  🚀 Starting training...
+
+✅ TensorBoard utilities loaded from: /Users/kuangfy/Desktop/230/230proj/scripts/training/common/tensorboard_utils.py
+❌ FinCast import failed: FinCast submodule not found at: /Users/kuangfy/Desktop/230/230proj/external/fincast/src
+
+ℹ️  To use FinCast, follow setup instructions in scripts/03_training/README.md
+   Or set fincast.enabled: false in your config to disable FinCast.
+
+
+📊 Overriding prediction horizons: [7, 14, 28]
+
+⏱️  Overriding epochs: 100 → 30
+
+🔧 Overriding FinCast: True → False (disabled)
+   ⚠️  WARNING: PAN-NAN fusion typically requires FinCast for the PAN branch.
+   ⚠️  Training may fail or produce poor results without FinCast.
+📝 Using temporary config with overridden horizons, fincast (disabled): /var/folders/t3/7n146c0j1bj7_m93fvlpwgtm0000gn/T/tmp8kjhgrnq.yaml
+
+🌱 Setting random seed: 42
+   ✅ Random seed set for PyTorch, NumPy, and Python random module
+
+📂 Loading data from data/processed ...
+Traceback (most recent call last):
+  File "/Users/kuangfy/Desktop/230/230proj/scripts/training/pan_nan_fusion/train.py", line 302, in <module>
+    main()
+    ~~~~^^
+  File "/Users/kuangfy/Desktop/230/230proj/scripts/training/pan_nan_fusion/train.py", line 258, in main
+    decoder_train.train(
+    ~~~~~~~~~~~~~~~~~~~^
+        config_path=config_path_to_use,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<5 lines>...
+        model_dir=args.model_dir
+        ^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/kuangfy/Desktop/230/230proj/scripts/training/decoder_transformer/decoder_transformer_train.py", line 626, in train
+    train_X_np = np.load(data_dir / 'X_train.npy', allow_pickle=True)
+  File "/Users/kuangfy/miniconda3/lib/python3.13/site-packages/numpy/lib/_npyio_impl.py", line 454, in load
+    fid = stack.enter_context(open(os.fspath(file), "rb"))
+                              ~~~~^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: 'data/processed/X_train.npy'
+
+  ❌ Completed
+
+[7/27] Testing dimensions:
+  d_model: 64, d_ff: 256, sent_hidden: 128, fusion_hidden: 64
+  Run name: dim_64_256_128_64
+  🚀 Starting training...
+
+✅ TensorBoard utilities loaded from: /Users/kuangfy/Desktop/230/230proj/scripts/training/common/tensorboard_utils.py
+❌ FinCast import failed: FinCast submodule not found at: /Users/kuangfy/Desktop/230/230proj/external/fincast/src
+
+ℹ️  To use FinCast, follow setup instructions in scripts/03_training/README.md
+   Or set fincast.enabled: false in your config to disable FinCast.
+
+
+📊 Overriding prediction horizons: [7, 14, 28]
+
+⏱️  Overriding epochs: 100 → 30
+
+🔧 Overriding FinCast: True → False (disabled)
+   ⚠️  WARNING: PAN-NAN fusion typically requires FinCast for the PAN branch.
+   ⚠️  Training may fail or produce poor results without FinCast.
+📝 Using temporary config with overridden horizons, fincast (disabled): /var/folders/t3/7n146c0j1bj7_m93fvlpwgtm0000gn/T/tmp9ov6m6g5.yaml
+
+🌱 Setting random seed: 42
+   ✅ Random seed set for PyTorch, NumPy, and Python random module
+
+📂 Loading data from data/processed ...
+Traceback (most recent call last):
+  File "/Users/kuangfy/Desktop/230/230proj/scripts/training/pan_nan_fusion/train.py", line 302, in <module>
+    main()
+    ~~~~^^
+  File "/Users/kuangfy/Desktop/230/230proj/scripts/training/pan_nan_fusion/train.py", line 258, in main
+    decoder_train.train(
+    ~~~~~~~~~~~~~~~~~~~^
+        config_path=config_path_to_use,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<5 lines>...
+        model_dir=args.model_dir
+        ^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/kuangfy/Desktop/230/230proj/scripts/training/decoder_transformer/decoder_transformer_train.py", line 626, in train
+    train_X_np = np.load(data_dir / 'X_train.npy', allow_pickle=True)
+  File "/Users/kuangfy/miniconda3/lib/python3.13/site-packages/numpy/lib/_npyio_impl.py", line 454, in load
+    fid = stack.enter_context(open(os.fspath(file), "rb"))
+                              ~~~~^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: 'data/processed/X_train.npy'
+
+  ❌ Completed
+
+[8/27] Testing dimensions:
+  d_model: 64, d_ff: 256, sent_hidden: 128, fusion_hidden: 128
+  Run name: dim_64_256_128_128
+  🚀 Starting training...
+
+✅ TensorBoard utilities loaded from: /Users/kuangfy/Desktop/230/230proj/scripts/training/common/tensorboard_utils.py
+❌ FinCast import failed: FinCast submodule not found at: /Users/kuangfy/Desktop/230/230proj/external/fincast/src
+
+ℹ️  To use FinCast, follow setup instructions in scripts/03_training/README.md
+   Or set fincast.enabled: false in your config to disable FinCast.
+
+
+📊 Overriding prediction horizons: [7, 14, 28]
+
+⏱️  Overriding epochs: 100 → 30
+
+🔧 Overriding FinCast: True → False (disabled)
+   ⚠️  WARNING: PAN-NAN fusion typically requires FinCast for the PAN branch.
+   ⚠️  Training may fail or produce poor results without FinCast.
+📝 Using temporary config with overridden horizons, fincast (disabled): /var/folders/t3/7n146c0j1bj7_m93fvlpwgtm0000gn/T/tmp5txys1bi.yaml
+
+🌱 Setting random seed: 42
+   ✅ Random seed set for PyTorch, NumPy, and Python random module
+
+📂 Loading data from data/processed ...
+Traceback (most recent call last):
+  File "/Users/kuangfy/Desktop/230/230proj/scripts/training/pan_nan_fusion/train.py", line 302, in <module>
+    main()
+    ~~~~^^
+  File "/Users/kuangfy/Desktop/230/230proj/scripts/training/pan_nan_fusion/train.py", line 258, in main
+    decoder_train.train(
+    ~~~~~~~~~~~~~~~~~~~^
+        config_path=config_path_to_use,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<5 lines>...
+        model_dir=args.model_dir
+        ^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/kuangfy/Desktop/230/230proj/scripts/training/decoder_transformer/decoder_transformer_train.py", line 626, in train
+    train_X_np = np.load(data_dir / 'X_train.npy', allow_pickle=True)
+  File "/Users/kuangfy/miniconda3/lib/python3.13/site-packages/numpy/lib/_npyio_impl.py", line 454, in load
+    fid = stack.enter_context(open(os.fspath(file), "rb"))
+                              ~~~~^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: 'data/processed/X_train.npy'
+
+  ❌ Completed
+
+[9/27] Testing dimensions:
+  d_model: 64, d_ff: 256, sent_hidden: 128, fusion_hidden: 256
+  Run name: dim_64_256_128_256
+  🚀 Starting training...
+
+✅ TensorBoard utilities loaded from: /Users/kuangfy/Desktop/230/230proj/scripts/training/common/tensorboard_utils.py
+❌ FinCast import failed: FinCast submodule not found at: /Users/kuangfy/Desktop/230/230proj/external/fincast/src
+
+ℹ️  To use FinCast, follow setup instructions in scripts/03_training/README.md
+   Or set fincast.enabled: false in your config to disable FinCast.
+
+
+📊 Overriding prediction horizons: [7, 14, 28]
+
+⏱️  Overriding epochs: 100 → 30
+
+🔧 Overriding FinCast: True → False (disabled)
+   ⚠️  WARNING: PAN-NAN fusion typically requires FinCast for the PAN branch.
+   ⚠️  Training may fail or produce poor results without FinCast.
+📝 Using temporary config with overridden horizons, fincast (disabled): /var/folders/t3/7n146c0j1bj7_m93fvlpwgtm0000gn/T/tmpxdvkham6.yaml
+
+🌱 Setting random seed: 42
+   ✅ Random seed set for PyTorch, NumPy, and Python random module
+
+📂 Loading data from data/processed ...
+Traceback (most recent call last):
+  File "/Users/kuangfy/Desktop/230/230proj/scripts/training/pan_nan_fusion/train.py", line 302, in <module>
+    main()
+    ~~~~^^
+  File "/Users/kuangfy/Desktop/230/230proj/scripts/training/pan_nan_fusion/train.py", line 258, in main
+    decoder_train.train(
+    ~~~~~~~~~~~~~~~~~~~^
+        config_path=config_path_to_use,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<5 lines>...
+        model_dir=args.model_dir
+        ^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/kuangfy/Desktop/230/230proj/scripts/training/decoder_transformer/decoder_transformer_train.py", line 626, in train
+    train_X_np = np.load(data_dir / 'X_train.npy', allow_pickle=True)
+  File "/Users/kuangfy/miniconda3/lib/python3.13/site-packages/numpy/lib/_npyio_impl.py", line 454, in load
+    fid = stack.enter_context(open(os.fspath(file), "rb"))
+                              ~~~~^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: 'data/processed/X_train.npy'
+
+  ❌ Completed
+
+[10/27] Testing dimensions:
+  d_model: 96, d_ff: 384, sent_hidden: 32, fusion_hidden: 64
+  Run name: dim_96_384_32_64
+  🚀 Starting training...
+
+✅ TensorBoard utilities loaded from: /Users/kuangfy/Desktop/230/230proj/scripts/training/common/tensorboard_utils.py
+❌ FinCast import failed: FinCast submodule not found at: /Users/kuangfy/Desktop/230/230proj/external/fincast/src
+
+ℹ️  To use FinCast, follow setup instructions in scripts/03_training/README.md
+   Or set fincast.enabled: false in your config to disable FinCast.
+
+
+📊 Overriding prediction horizons: [7, 14, 28]
+
+⏱️  Overriding epochs: 100 → 30
+
+🔧 Overriding FinCast: True → False (disabled)
+   ⚠️  WARNING: PAN-NAN fusion typically requires FinCast for the PAN branch.
+   ⚠️  Training may fail or produce poor results without FinCast.
+📝 Using temporary config with overridden horizons, fincast (disabled): /var/folders/t3/7n146c0j1bj7_m93fvlpwgtm0000gn/T/tmp5t6q1d7i.yaml
+
+🌱 Setting random seed: 42
+   ✅ Random seed set for PyTorch, NumPy, and Python random module
+
+📂 Loading data from data/processed ...
+Traceback (most recent call last):
+  File "/Users/kuangfy/Desktop/230/230proj/scripts/training/pan_nan_fusion/train.py", line 302, in <module>
+    main()
+    ~~~~^^
+  File "/Users/kuangfy/Desktop/230/230proj/scripts/training/pan_nan_fusion/train.py", line 258, in main
+    decoder_train.train(
+    ~~~~~~~~~~~~~~~~~~~^
+        config_path=config_path_to_use,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<5 lines>...
+        model_dir=args.model_dir
+        ^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/kuangfy/Desktop/230/230proj/scripts/training/decoder_transformer/decoder_transformer_train.py", line 626, in train
+    train_X_np = np.load(data_dir / 'X_train.npy', allow_pickle=True)
+  File "/Users/kuangfy/miniconda3/lib/python3.13/site-packages/numpy/lib/_npyio_impl.py", line 454, in load
+    fid = stack.enter_context(open(os.fspath(file), "rb"))
+                              ~~~~^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: 'data/processed/X_train.npy'
+
+  ❌ Completed
+
+[11/27] Testing dimensions:
+  d_model: 96, d_ff: 384, sent_hidden: 32, fusion_hidden: 128
+  Run name: dim_96_384_32_128
+  🚀 Starting training...
+
+✅ TensorBoard utilities loaded from: /Users/kuangfy/Desktop/230/230proj/scripts/training/common/tensorboard_utils.py
+❌ FinCast import failed: FinCast submodule not found at: /Users/kuangfy/Desktop/230/230proj/external/fincast/src
+
+ℹ️  To use FinCast, follow setup instructions in scripts/03_training/README.md
+   Or set fincast.enabled: false in your config to disable FinCast.
+
+
+📊 Overriding prediction horizons: [7, 14, 28]
+
+⏱️  Overriding epochs: 100 → 30
+
+🔧 Overriding FinCast: True → False (disabled)
+   ⚠️  WARNING: PAN-NAN fusion typically requires FinCast for the PAN branch.
+   ⚠️  Training may fail or produce poor results without FinCast.
+📝 Using temporary config with overridden horizons, fincast (disabled): /var/folders/t3/7n146c0j1bj7_m93fvlpwgtm0000gn/T/tmpluxukwi1.yaml
+
+🌱 Setting random seed: 42
+   ✅ Random seed set for PyTorch, NumPy, and Python random module
+
+📂 Loading data from data/processed ...
+Traceback (most recent call last):
+  File "/Users/kuangfy/Desktop/230/230proj/scripts/training/pan_nan_fusion/train.py", line 302, in <module>
+    main()
+    ~~~~^^
+  File "/Users/kuangfy/Desktop/230/230proj/scripts/training/pan_nan_fusion/train.py", line 258, in main
+    decoder_train.train(
+    ~~~~~~~~~~~~~~~~~~~^
+        config_path=config_path_to_use,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<5 lines>...
+        model_dir=args.model_dir
+        ^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/kuangfy/Desktop/230/230proj/scripts/training/decoder_transformer/decoder_transformer_train.py", line 626, in train
+    train_X_np = np.load(data_dir / 'X_train.npy', allow_pickle=True)
+  File "/Users/kuangfy/miniconda3/lib/python3.13/site-packages/numpy/lib/_npyio_impl.py", line 454, in load
+    fid = stack.enter_context(open(os.fspath(file), "rb"))
+                              ~~~~^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: 'data/processed/X_train.npy'
+
+  ❌ Completed
+
+[12/27] Testing dimensions:
+  d_model: 96, d_ff: 384, sent_hidden: 32, fusion_hidden: 256
+  Run name: dim_96_384_32_256
+  🚀 Starting training...
+
+✅ TensorBoard utilities loaded from: /Users/kuangfy/Desktop/230/230proj/scripts/training/common/tensorboard_utils.py
+❌ FinCast import failed: FinCast submodule not found at: /Users/kuangfy/Desktop/230/230proj/external/fincast/src
+
+ℹ️  To use FinCast, follow setup instructions in scripts/03_training/README.md
+   Or set fincast.enabled: false in your config to disable FinCast.
+
+
+📊 Overriding prediction horizons: [7, 14, 28]
+
+⏱️  Overriding epochs: 100 → 30
+
+🔧 Overriding FinCast: True → False (disabled)
+   ⚠️  WARNING: PAN-NAN fusion typically requires FinCast for the PAN branch.
+   ⚠️  Training may fail or produce poor results without FinCast.
+📝 Using temporary config with overridden horizons, fincast (disabled): /var/folders/t3/7n146c0j1bj7_m93fvlpwgtm0000gn/T/tmpvt02hago.yaml
+
+🌱 Setting random seed: 42
+   ✅ Random seed set for PyTorch, NumPy, and Python random module
+
+📂 Loading data from data/processed ...
+Traceback (most recent call last):
+  File "/Users/kuangfy/Desktop/230/230proj/scripts/training/pan_nan_fusion/train.py", line 302, in <module>
+    main()
+    ~~~~^^
+  File "/Users/kuangfy/Desktop/230/230proj/scripts/training/pan_nan_fusion/train.py", line 258, in main
+    decoder_train.train(
+    ~~~~~~~~~~~~~~~~~~~^
+        config_path=config_path_to_use,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<5 lines>...
+        model_dir=args.model_dir
+        ^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/kuangfy/Desktop/230/230proj/scripts/training/decoder_transformer/decoder_transformer_train.py", line 626, in train
+    train_X_np = np.load(data_dir / 'X_train.npy', allow_pickle=True)
+  File "/Users/kuangfy/miniconda3/lib/python3.13/site-packages/numpy/lib/_npyio_impl.py", line 454, in load
+    fid = stack.enter_context(open(os.fspath(file), "rb"))
+                              ~~~~^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: 'data/processed/X_train.npy'
+
+  ❌ Completed
+
+[13/27] Testing dimensions:
+  d_model: 96, d_ff: 384, sent_hidden: 64, fusion_hidden: 64
+  Run name: dim_96_384_64_64
+  🚀 Starting training...
+
+✅ TensorBoard utilities loaded from: /Users/kuangfy/Desktop/230/230proj/scripts/training/common/tensorboard_utils.py
+❌ FinCast import failed: FinCast submodule not found at: /Users/kuangfy/Desktop/230/230proj/external/fincast/src
+
+ℹ️  To use FinCast, follow setup instructions in scripts/03_training/README.md
+   Or set fincast.enabled: false in your config to disable FinCast.
+
+
+📊 Overriding prediction horizons: [7, 14, 28]
+
+⏱️  Overriding epochs: 100 → 30
+
+🔧 Overriding FinCast: True → False (disabled)
+   ⚠️  WARNING: PAN-NAN fusion typically requires FinCast for the PAN branch.
+   ⚠️  Training may fail or produce poor results without FinCast.
+📝 Using temporary config with overridden horizons, fincast (disabled): /var/folders/t3/7n146c0j1bj7_m93fvlpwgtm0000gn/T/tmplwfrpazy.yaml
+
+🌱 Setting random seed: 42
+   ✅ Random seed set for PyTorch, NumPy, and Python random module
+
+📂 Loading data from data/processed ...
+Traceback (most recent call last):
+  File "/Users/kuangfy/Desktop/230/230proj/scripts/training/pan_nan_fusion/train.py", line 302, in <module>
+    main()
+    ~~~~^^
+  File "/Users/kuangfy/Desktop/230/230proj/scripts/training/pan_nan_fusion/train.py", line 258, in main
+    decoder_train.train(
+    ~~~~~~~~~~~~~~~~~~~^
+        config_path=config_path_to_use,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<5 lines>...
+        model_dir=args.model_dir
+        ^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/kuangfy/Desktop/230/230proj/scripts/training/decoder_transformer/decoder_transformer_train.py", line 626, in train
+    train_X_np = np.load(data_dir / 'X_train.npy', allow_pickle=True)
+  File "/Users/kuangfy/miniconda3/lib/python3.13/site-packages/numpy/lib/_npyio_impl.py", line 454, in load
+    fid = stack.enter_context(open(os.fspath(file), "rb"))
+                              ~~~~^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: 'data/processed/X_train.npy'
+
+  ❌ Completed
+
+[14/27] Testing dimensions:
+  d_model: 96, d_ff: 384, sent_hidden: 64, fusion_hidden: 128
+  Run name: dim_96_384_64_128
+  🚀 Starting training...
+
+✅ TensorBoard utilities loaded from: /Users/kuangfy/Desktop/230/230proj/scripts/training/common/tensorboard_utils.py
+❌ FinCast import failed: FinCast submodule not found at: /Users/kuangfy/Desktop/230/230proj/external/fincast/src
+
+ℹ️  To use FinCast, follow setup instructions in scripts/03_training/README.md
+   Or set fincast.enabled: false in your config to disable FinCast.
+
+
+📊 Overriding prediction horizons: [7, 14, 28]
+
+⏱️  Overriding epochs: 100 → 30
+
+🔧 Overriding FinCast: True → False (disabled)
+   ⚠️  WARNING: PAN-NAN fusion typically requires FinCast for the PAN branch.
+   ⚠️  Training may fail or produce poor results without FinCast.
+📝 Using temporary config with overridden horizons, fincast (disabled): /var/folders/t3/7n146c0j1bj7_m93fvlpwgtm0000gn/T/tmp0wxsue_d.yaml
+
+🌱 Setting random seed: 42
+   ✅ Random seed set for PyTorch, NumPy, and Python random module
+
+📂 Loading data from data/processed ...
+Traceback (most recent call last):
+  File "/Users/kuangfy/Desktop/230/230proj/scripts/training/pan_nan_fusion/train.py", line 302, in <module>
+    main()
+    ~~~~^^
+  File "/Users/kuangfy/Desktop/230/230proj/scripts/training/pan_nan_fusion/train.py", line 258, in main
+    decoder_train.train(
+    ~~~~~~~~~~~~~~~~~~~^
+        config_path=config_path_to_use,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<5 lines>...
+        model_dir=args.model_dir
+        ^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/kuangfy/Desktop/230/230proj/scripts/training/decoder_transformer/decoder_transformer_train.py", line 626, in train
+    train_X_np = np.load(data_dir / 'X_train.npy', allow_pickle=True)
+  File "/Users/kuangfy/miniconda3/lib/python3.13/site-packages/numpy/lib/_npyio_impl.py", line 454, in load
+    fid = stack.enter_context(open(os.fspath(file), "rb"))
+                              ~~~~^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: 'data/processed/X_train.npy'
+
+  ❌ Completed
+
+[15/27] Testing dimensions:
+  d_model: 96, d_ff: 384, sent_hidden: 64, fusion_hidden: 256
+  Run name: dim_96_384_64_256
+  🚀 Starting training...
+
+✅ TensorBoard utilities loaded from: /Users/kuangfy/Desktop/230/230proj/scripts/training/common/tensorboard_utils.py
+❌ FinCast import failed: FinCast submodule not found at: /Users/kuangfy/Desktop/230/230proj/external/fincast/src
+
+ℹ️  To use FinCast, follow setup instructions in scripts/03_training/README.md
+   Or set fincast.enabled: false in your config to disable FinCast.
+
+
+📊 Overriding prediction horizons: [7, 14, 28]
+
+⏱️  Overriding epochs: 100 → 30
+
+🔧 Overriding FinCast: True → False (disabled)
+   ⚠️  WARNING: PAN-NAN fusion typically requires FinCast for the PAN branch.
+   ⚠️  Training may fail or produce poor results without FinCast.
+📝 Using temporary config with overridden horizons, fincast (disabled): /var/folders/t3/7n146c0j1bj7_m93fvlpwgtm0000gn/T/tmpcm83cv7y.yaml
+
+🌱 Setting random seed: 42
+   ✅ Random seed set for PyTorch, NumPy, and Python random module
+
+📂 Loading data from data/processed ...
+Traceback (most recent call last):
+  File "/Users/kuangfy/Desktop/230/230proj/scripts/training/pan_nan_fusion/train.py", line 302, in <module>
+    main()
+    ~~~~^^
+  File "/Users/kuangfy/Desktop/230/230proj/scripts/training/pan_nan_fusion/train.py", line 258, in main
+    decoder_train.train(
+    ~~~~~~~~~~~~~~~~~~~^
+        config_path=config_path_to_use,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<5 lines>...
+        model_dir=args.model_dir
+        ^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/kuangfy/Desktop/230/230proj/scripts/training/decoder_transformer/decoder_transformer_train.py", line 626, in train
+    train_X_np = np.load(data_dir / 'X_train.npy', allow_pickle=True)
+  File "/Users/kuangfy/miniconda3/lib/python3.13/site-packages/numpy/lib/_npyio_impl.py", line 454, in load
+    fid = stack.enter_context(open(os.fspath(file), "rb"))
+                              ~~~~^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: 'data/processed/X_train.npy'
+
+  ❌ Completed
+
+[16/27] Testing dimensions:
+  d_model: 96, d_ff: 384, sent_hidden: 128, fusion_hidden: 64
+  Run name: dim_96_384_128_64
+  🚀 Starting training...
+
+✅ TensorBoard utilities loaded from: /Users/kuangfy/Desktop/230/230proj/scripts/training/common/tensorboard_utils.py
+❌ FinCast import failed: FinCast submodule not found at: /Users/kuangfy/Desktop/230/230proj/external/fincast/src
+
+ℹ️  To use FinCast, follow setup instructions in scripts/03_training/README.md
+   Or set fincast.enabled: false in your config to disable FinCast.
+
+
+📊 Overriding prediction horizons: [7, 14, 28]
+
+⏱️  Overriding epochs: 100 → 30
+
+🔧 Overriding FinCast: True → False (disabled)
+   ⚠️  WARNING: PAN-NAN fusion typically requires FinCast for the PAN branch.
+   ⚠️  Training may fail or produce poor results without FinCast.
+📝 Using temporary config with overridden horizons, fincast (disabled): /var/folders/t3/7n146c0j1bj7_m93fvlpwgtm0000gn/T/tmpmz394c_6.yaml
+
+🌱 Setting random seed: 42
+   ✅ Random seed set for PyTorch, NumPy, and Python random module
+
+📂 Loading data from data/processed ...
+Traceback (most recent call last):
+  File "/Users/kuangfy/Desktop/230/230proj/scripts/training/pan_nan_fusion/train.py", line 302, in <module>
+    main()
+    ~~~~^^
+  File "/Users/kuangfy/Desktop/230/230proj/scripts/training/pan_nan_fusion/train.py", line 258, in main
+    decoder_train.train(
+    ~~~~~~~~~~~~~~~~~~~^
+        config_path=config_path_to_use,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<5 lines>...
+        model_dir=args.model_dir
+        ^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/kuangfy/Desktop/230/230proj/scripts/training/decoder_transformer/decoder_transformer_train.py", line 626, in train
+    train_X_np = np.load(data_dir / 'X_train.npy', allow_pickle=True)
+  File "/Users/kuangfy/miniconda3/lib/python3.13/site-packages/numpy/lib/_npyio_impl.py", line 454, in load
+    fid = stack.enter_context(open(os.fspath(file), "rb"))
+                              ~~~~^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: 'data/processed/X_train.npy'
+
+  ❌ Completed
+
+[17/27] Testing dimensions:
+  d_model: 96, d_ff: 384, sent_hidden: 128, fusion_hidden: 128
+  Run name: dim_96_384_128_128
+  🚀 Starting training...
+
+✅ TensorBoard utilities loaded from: /Users/kuangfy/Desktop/230/230proj/scripts/training/common/tensorboard_utils.py
+❌ FinCast import failed: FinCast submodule not found at: /Users/kuangfy/Desktop/230/230proj/external/fincast/src
+
+ℹ️  To use FinCast, follow setup instructions in scripts/03_training/README.md
+   Or set fincast.enabled: false in your config to disable FinCast.
+
+
+📊 Overriding prediction horizons: [7, 14, 28]
+
+⏱️  Overriding epochs: 100 → 30
+
+🔧 Overriding FinCast: True → False (disabled)
+   ⚠️  WARNING: PAN-NAN fusion typically requires FinCast for the PAN branch.
+   ⚠️  Training may fail or produce poor results without FinCast.
+📝 Using temporary config with overridden horizons, fincast (disabled): /var/folders/t3/7n146c0j1bj7_m93fvlpwgtm0000gn/T/tmpu4hzzzm5.yaml
+
+🌱 Setting random seed: 42
+   ✅ Random seed set for PyTorch, NumPy, and Python random module
+
+📂 Loading data from data/processed ...
+Traceback (most recent call last):
+  File "/Users/kuangfy/Desktop/230/230proj/scripts/training/pan_nan_fusion/train.py", line 302, in <module>
+    main()
+    ~~~~^^
+  File "/Users/kuangfy/Desktop/230/230proj/scripts/training/pan_nan_fusion/train.py", line 258, in main
+    decoder_train.train(
+    ~~~~~~~~~~~~~~~~~~~^
+        config_path=config_path_to_use,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<5 lines>...
+        model_dir=args.model_dir
+        ^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/kuangfy/Desktop/230/230proj/scripts/training/decoder_transformer/decoder_transformer_train.py", line 626, in train
+    train_X_np = np.load(data_dir / 'X_train.npy', allow_pickle=True)
+  File "/Users/kuangfy/miniconda3/lib/python3.13/site-packages/numpy/lib/_npyio_impl.py", line 454, in load
+    fid = stack.enter_context(open(os.fspath(file), "rb"))
+                              ~~~~^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: 'data/processed/X_train.npy'
+
+  ❌ Completed
+
+[18/27] Testing dimensions:
+  d_model: 96, d_ff: 384, sent_hidden: 128, fusion_hidden: 256
+  Run name: dim_96_384_128_256
+  🚀 Starting training...
+
+✅ TensorBoard utilities loaded from: /Users/kuangfy/Desktop/230/230proj/scripts/training/common/tensorboard_utils.py
+❌ FinCast import failed: FinCast submodule not found at: /Users/kuangfy/Desktop/230/230proj/external/fincast/src
+
+ℹ️  To use FinCast, follow setup instructions in scripts/03_training/README.md
+   Or set fincast.enabled: false in your config to disable FinCast.
+
+
+📊 Overriding prediction horizons: [7, 14, 28]
+
+⏱️  Overriding epochs: 100 → 30
+
+🔧 Overriding FinCast: True → False (disabled)
+   ⚠️  WARNING: PAN-NAN fusion typically requires FinCast for the PAN branch.
+   ⚠️  Training may fail or produce poor results without FinCast.
+📝 Using temporary config with overridden horizons, fincast (disabled): /var/folders/t3/7n146c0j1bj7_m93fvlpwgtm0000gn/T/tmp_jraiogr.yaml
+
+🌱 Setting random seed: 42
+   ✅ Random seed set for PyTorch, NumPy, and Python random module
+
+📂 Loading data from data/processed ...
+Traceback (most recent call last):
+  File "/Users/kuangfy/Desktop/230/230proj/scripts/training/pan_nan_fusion/train.py", line 302, in <module>
+    main()
+    ~~~~^^
+  File "/Users/kuangfy/Desktop/230/230proj/scripts/training/pan_nan_fusion/train.py", line 258, in main
+    decoder_train.train(
+    ~~~~~~~~~~~~~~~~~~~^
+        config_path=config_path_to_use,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<5 lines>...
+        model_dir=args.model_dir
+        ^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/kuangfy/Desktop/230/230proj/scripts/training/decoder_transformer/decoder_transformer_train.py", line 626, in train
+    train_X_np = np.load(data_dir / 'X_train.npy', allow_pickle=True)
+  File "/Users/kuangfy/miniconda3/lib/python3.13/site-packages/numpy/lib/_npyio_impl.py", line 454, in load
+    fid = stack.enter_context(open(os.fspath(file), "rb"))
+                              ~~~~^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: 'data/processed/X_train.npy'
+
+  ❌ Completed
+
+[19/27] Testing dimensions:
+  d_model: 128, d_ff: 512, sent_hidden: 32, fusion_hidden: 64
+  Run name: dim_128_512_32_64
+  🚀 Starting training...
+
+✅ TensorBoard utilities loaded from: /Users/kuangfy/Desktop/230/230proj/scripts/training/common/tensorboard_utils.py
+❌ FinCast import failed: FinCast submodule not found at: /Users/kuangfy/Desktop/230/230proj/external/fincast/src
+
+ℹ️  To use FinCast, follow setup instructions in scripts/03_training/README.md
+   Or set fincast.enabled: false in your config to disable FinCast.
+
+
+📊 Overriding prediction horizons: [7, 14, 28]
+
+⏱️  Overriding epochs: 100 → 30
+
+🔧 Overriding FinCast: True → False (disabled)
+   ⚠️  WARNING: PAN-NAN fusion typically requires FinCast for the PAN branch.
+   ⚠️  Training may fail or produce poor results without FinCast.
+📝 Using temporary config with overridden horizons, fincast (disabled): /var/folders/t3/7n146c0j1bj7_m93fvlpwgtm0000gn/T/tmplhae945x.yaml
+
+🌱 Setting random seed: 42
+   ✅ Random seed set for PyTorch, NumPy, and Python random module
+
+📂 Loading data from data/processed ...
+Traceback (most recent call last):
+  File "/Users/kuangfy/Desktop/230/230proj/scripts/training/pan_nan_fusion/train.py", line 302, in <module>
+    main()
+    ~~~~^^
+  File "/Users/kuangfy/Desktop/230/230proj/scripts/training/pan_nan_fusion/train.py", line 258, in main
+    decoder_train.train(
+    ~~~~~~~~~~~~~~~~~~~^
+        config_path=config_path_to_use,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<5 lines>...
+        model_dir=args.model_dir
+        ^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/kuangfy/Desktop/230/230proj/scripts/training/decoder_transformer/decoder_transformer_train.py", line 626, in train
+    train_X_np = np.load(data_dir / 'X_train.npy', allow_pickle=True)
+  File "/Users/kuangfy/miniconda3/lib/python3.13/site-packages/numpy/lib/_npyio_impl.py", line 454, in load
+    fid = stack.enter_context(open(os.fspath(file), "rb"))
+                              ~~~~^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: 'data/processed/X_train.npy'
+
+  ❌ Completed
+
+[20/27] Testing dimensions:
+  d_model: 128, d_ff: 512, sent_hidden: 32, fusion_hidden: 128
+  Run name: dim_128_512_32_128
+  🚀 Starting training...
+
+✅ TensorBoard utilities loaded from: /Users/kuangfy/Desktop/230/230proj/scripts/training/common/tensorboard_utils.py
+❌ FinCast import failed: FinCast submodule not found at: /Users/kuangfy/Desktop/230/230proj/external/fincast/src
+
+ℹ️  To use FinCast, follow setup instructions in scripts/03_training/README.md
+   Or set fincast.enabled: false in your config to disable FinCast.
+
+
+📊 Overriding prediction horizons: [7, 14, 28]
+
+⏱️  Overriding epochs: 100 → 30
+
+🔧 Overriding FinCast: True → False (disabled)
+   ⚠️  WARNING: PAN-NAN fusion typically requires FinCast for the PAN branch.
+   ⚠️  Training may fail or produce poor results without FinCast.
+📝 Using temporary config with overridden horizons, fincast (disabled): /var/folders/t3/7n146c0j1bj7_m93fvlpwgtm0000gn/T/tmp727_346n.yaml
+
+🌱 Setting random seed: 42
+   ✅ Random seed set for PyTorch, NumPy, and Python random module
+
+📂 Loading data from data/processed ...
+Traceback (most recent call last):
+  File "/Users/kuangfy/Desktop/230/230proj/scripts/training/pan_nan_fusion/train.py", line 302, in <module>
+    main()
+    ~~~~^^
+  File "/Users/kuangfy/Desktop/230/230proj/scripts/training/pan_nan_fusion/train.py", line 258, in main
+    decoder_train.train(
+    ~~~~~~~~~~~~~~~~~~~^
+        config_path=config_path_to_use,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<5 lines>...
+        model_dir=args.model_dir
+        ^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/kuangfy/Desktop/230/230proj/scripts/training/decoder_transformer/decoder_transformer_train.py", line 626, in train
+    train_X_np = np.load(data_dir / 'X_train.npy', allow_pickle=True)
+  File "/Users/kuangfy/miniconda3/lib/python3.13/site-packages/numpy/lib/_npyio_impl.py", line 454, in load
+    fid = stack.enter_context(open(os.fspath(file), "rb"))
+                              ~~~~^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: 'data/processed/X_train.npy'
+
+  ❌ Completed
+
+[21/27] Testing dimensions:
+  d_model: 128, d_ff: 512, sent_hidden: 32, fusion_hidden: 256
+  Run name: dim_128_512_32_256
+  🚀 Starting training...
+
+✅ TensorBoard utilities loaded from: /Users/kuangfy/Desktop/230/230proj/scripts/training/common/tensorboard_utils.py
+❌ FinCast import failed: FinCast submodule not found at: /Users/kuangfy/Desktop/230/230proj/external/fincast/src
+
+ℹ️  To use FinCast, follow setup instructions in scripts/03_training/README.md
+   Or set fincast.enabled: false in your config to disable FinCast.
+
+
+📊 Overriding prediction horizons: [7, 14, 28]
+
+⏱️  Overriding epochs: 100 → 30
+
+🔧 Overriding FinCast: True → False (disabled)
+   ⚠️  WARNING: PAN-NAN fusion typically requires FinCast for the PAN branch.
+   ⚠️  Training may fail or produce poor results without FinCast.
+📝 Using temporary config with overridden horizons, fincast (disabled): /var/folders/t3/7n146c0j1bj7_m93fvlpwgtm0000gn/T/tmp79e6fr1w.yaml
+
+🌱 Setting random seed: 42
+   ✅ Random seed set for PyTorch, NumPy, and Python random module
+
+📂 Loading data from data/processed ...
+Traceback (most recent call last):
+  File "/Users/kuangfy/Desktop/230/230proj/scripts/training/pan_nan_fusion/train.py", line 302, in <module>
+    main()
+    ~~~~^^
+  File "/Users/kuangfy/Desktop/230/230proj/scripts/training/pan_nan_fusion/train.py", line 258, in main
+    decoder_train.train(
+    ~~~~~~~~~~~~~~~~~~~^
+        config_path=config_path_to_use,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<5 lines>...
+        model_dir=args.model_dir
+        ^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/kuangfy/Desktop/230/230proj/scripts/training/decoder_transformer/decoder_transformer_train.py", line 626, in train
+    train_X_np = np.load(data_dir / 'X_train.npy', allow_pickle=True)
+  File "/Users/kuangfy/miniconda3/lib/python3.13/site-packages/numpy/lib/_npyio_impl.py", line 454, in load
+    fid = stack.enter_context(open(os.fspath(file), "rb"))
+                              ~~~~^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: 'data/processed/X_train.npy'
+
+  ❌ Completed
+
+[22/27] Testing dimensions:
+  d_model: 128, d_ff: 512, sent_hidden: 64, fusion_hidden: 64
+  Run name: dim_128_512_64_64
+  🚀 Starting training...
+
+✅ TensorBoard utilities loaded from: /Users/kuangfy/Desktop/230/230proj/scripts/training/common/tensorboard_utils.py
+❌ FinCast import failed: FinCast submodule not found at: /Users/kuangfy/Desktop/230/230proj/external/fincast/src
+
+ℹ️  To use FinCast, follow setup instructions in scripts/03_training/README.md
+   Or set fincast.enabled: false in your config to disable FinCast.
+
+
+📊 Overriding prediction horizons: [7, 14, 28]
+
+⏱️  Overriding epochs: 100 → 30
+
+🔧 Overriding FinCast: True → False (disabled)
+   ⚠️  WARNING: PAN-NAN fusion typically requires FinCast for the PAN branch.
+   ⚠️  Training may fail or produce poor results without FinCast.
+📝 Using temporary config with overridden horizons, fincast (disabled): /var/folders/t3/7n146c0j1bj7_m93fvlpwgtm0000gn/T/tmpnyy4pqq1.yaml
+
+🌱 Setting random seed: 42
+   ✅ Random seed set for PyTorch, NumPy, and Python random module
+
+📂 Loading data from data/processed ...
+Traceback (most recent call last):
+  File "/Users/kuangfy/Desktop/230/230proj/scripts/training/pan_nan_fusion/train.py", line 302, in <module>
+    main()
+    ~~~~^^
+  File "/Users/kuangfy/Desktop/230/230proj/scripts/training/pan_nan_fusion/train.py", line 258, in main
+    decoder_train.train(
+    ~~~~~~~~~~~~~~~~~~~^
+        config_path=config_path_to_use,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<5 lines>...
+        model_dir=args.model_dir
+        ^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/kuangfy/Desktop/230/230proj/scripts/training/decoder_transformer/decoder_transformer_train.py", line 626, in train
+    train_X_np = np.load(data_dir / 'X_train.npy', allow_pickle=True)
+  File "/Users/kuangfy/miniconda3/lib/python3.13/site-packages/numpy/lib/_npyio_impl.py", line 454, in load
+    fid = stack.enter_context(open(os.fspath(file), "rb"))
+                              ~~~~^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: 'data/processed/X_train.npy'
+
+  ❌ Completed
+
+[23/27] Testing dimensions:
+  d_model: 128, d_ff: 512, sent_hidden: 64, fusion_hidden: 128
+  Run name: dim_128_512_64_128
+  🚀 Starting training...
+
+✅ TensorBoard utilities loaded from: /Users/kuangfy/Desktop/230/230proj/scripts/training/common/tensorboard_utils.py
+❌ FinCast import failed: FinCast submodule not found at: /Users/kuangfy/Desktop/230/230proj/external/fincast/src
+
+ℹ️  To use FinCast, follow setup instructions in scripts/03_training/README.md
+   Or set fincast.enabled: false in your config to disable FinCast.
+
+
+📊 Overriding prediction horizons: [7, 14, 28]
+
+⏱️  Overriding epochs: 100 → 30
+
+🔧 Overriding FinCast: True → False (disabled)
+   ⚠️  WARNING: PAN-NAN fusion typically requires FinCast for the PAN branch.
+   ⚠️  Training may fail or produce poor results without FinCast.
+📝 Using temporary config with overridden horizons, fincast (disabled): /var/folders/t3/7n146c0j1bj7_m93fvlpwgtm0000gn/T/tmpltz8rqb6.yaml
+
+🌱 Setting random seed: 42
+   ✅ Random seed set for PyTorch, NumPy, and Python random module
+
+📂 Loading data from data/processed ...
+Traceback (most recent call last):
+  File "/Users/kuangfy/Desktop/230/230proj/scripts/training/pan_nan_fusion/train.py", line 302, in <module>
+    main()
+    ~~~~^^
+  File "/Users/kuangfy/Desktop/230/230proj/scripts/training/pan_nan_fusion/train.py", line 258, in main
+    decoder_train.train(
+    ~~~~~~~~~~~~~~~~~~~^
+        config_path=config_path_to_use,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<5 lines>...
+        model_dir=args.model_dir
+        ^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/kuangfy/Desktop/230/230proj/scripts/training/decoder_transformer/decoder_transformer_train.py", line 626, in train
+    train_X_np = np.load(data_dir / 'X_train.npy', allow_pickle=True)
+  File "/Users/kuangfy/miniconda3/lib/python3.13/site-packages/numpy/lib/_npyio_impl.py", line 454, in load
+    fid = stack.enter_context(open(os.fspath(file), "rb"))
+                              ~~~~^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: 'data/processed/X_train.npy'
+
+  ❌ Completed
+
+[24/27] Testing dimensions:
+  d_model: 128, d_ff: 512, sent_hidden: 64, fusion_hidden: 256
+  Run name: dim_128_512_64_256
+  🚀 Starting training...
+
+✅ TensorBoard utilities loaded from: /Users/kuangfy/Desktop/230/230proj/scripts/training/common/tensorboard_utils.py
+❌ FinCast import failed: FinCast submodule not found at: /Users/kuangfy/Desktop/230/230proj/external/fincast/src
+
+ℹ️  To use FinCast, follow setup instructions in scripts/03_training/README.md
+   Or set fincast.enabled: false in your config to disable FinCast.
+
+
+📊 Overriding prediction horizons: [7, 14, 28]
+
+⏱️  Overriding epochs: 100 → 30
+
+🔧 Overriding FinCast: True → False (disabled)
+   ⚠️  WARNING: PAN-NAN fusion typically requires FinCast for the PAN branch.
+   ⚠️  Training may fail or produce poor results without FinCast.
+📝 Using temporary config with overridden horizons, fincast (disabled): /var/folders/t3/7n146c0j1bj7_m93fvlpwgtm0000gn/T/tmpbf1sifjp.yaml
+
+🌱 Setting random seed: 42
+   ✅ Random seed set for PyTorch, NumPy, and Python random module
+
+📂 Loading data from data/processed ...
+Traceback (most recent call last):
+  File "/Users/kuangfy/Desktop/230/230proj/scripts/training/pan_nan_fusion/train.py", line 302, in <module>
+    main()
+    ~~~~^^
+  File "/Users/kuangfy/Desktop/230/230proj/scripts/training/pan_nan_fusion/train.py", line 258, in main
+    decoder_train.train(
+    ~~~~~~~~~~~~~~~~~~~^
+        config_path=config_path_to_use,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<5 lines>...
+        model_dir=args.model_dir
+        ^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/kuangfy/Desktop/230/230proj/scripts/training/decoder_transformer/decoder_transformer_train.py", line 626, in train
+    train_X_np = np.load(data_dir / 'X_train.npy', allow_pickle=True)
+  File "/Users/kuangfy/miniconda3/lib/python3.13/site-packages/numpy/lib/_npyio_impl.py", line 454, in load
+    fid = stack.enter_context(open(os.fspath(file), "rb"))
+                              ~~~~^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: 'data/processed/X_train.npy'
+
+  ❌ Completed
+
+[25/27] Testing dimensions:
+  d_model: 128, d_ff: 512, sent_hidden: 128, fusion_hidden: 64
+  Run name: dim_128_512_128_64
+  🚀 Starting training...
+
+✅ TensorBoard utilities loaded from: /Users/kuangfy/Desktop/230/230proj/scripts/training/common/tensorboard_utils.py
+❌ FinCast import failed: FinCast submodule not found at: /Users/kuangfy/Desktop/230/230proj/external/fincast/src
+
+ℹ️  To use FinCast, follow setup instructions in scripts/03_training/README.md
+   Or set fincast.enabled: false in your config to disable FinCast.
+
+
+📊 Overriding prediction horizons: [7, 14, 28]
+
+⏱️  Overriding epochs: 100 → 30
+
+🔧 Overriding FinCast: True → False (disabled)
+   ⚠️  WARNING: PAN-NAN fusion typically requires FinCast for the PAN branch.
+   ⚠️  Training may fail or produce poor results without FinCast.
+📝 Using temporary config with overridden horizons, fincast (disabled): /var/folders/t3/7n146c0j1bj7_m93fvlpwgtm0000gn/T/tmpdgdzlsza.yaml
+
+🌱 Setting random seed: 42
+   ✅ Random seed set for PyTorch, NumPy, and Python random module
+
+📂 Loading data from data/processed ...
+Traceback (most recent call last):
+  File "/Users/kuangfy/Desktop/230/230proj/scripts/training/pan_nan_fusion/train.py", line 302, in <module>
+    main()
+    ~~~~^^
+  File "/Users/kuangfy/Desktop/230/230proj/scripts/training/pan_nan_fusion/train.py", line 258, in main
+    decoder_train.train(
+    ~~~~~~~~~~~~~~~~~~~^
+        config_path=config_path_to_use,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<5 lines>...
+        model_dir=args.model_dir
+        ^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/kuangfy/Desktop/230/230proj/scripts/training/decoder_transformer/decoder_transformer_train.py", line 626, in train
+    train_X_np = np.load(data_dir / 'X_train.npy', allow_pickle=True)
+  File "/Users/kuangfy/miniconda3/lib/python3.13/site-packages/numpy/lib/_npyio_impl.py", line 454, in load
+    fid = stack.enter_context(open(os.fspath(file), "rb"))
+                              ~~~~^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: 'data/processed/X_train.npy'
+
+  ❌ Completed
+
+[26/27] Testing dimensions:
+  d_model: 128, d_ff: 512, sent_hidden: 128, fusion_hidden: 128
+  Run name: dim_128_512_128_128
+  🚀 Starting training...
+
+✅ TensorBoard utilities loaded from: /Users/kuangfy/Desktop/230/230proj/scripts/training/common/tensorboard_utils.py
+❌ FinCast import failed: FinCast submodule not found at: /Users/kuangfy/Desktop/230/230proj/external/fincast/src
+
+ℹ️  To use FinCast, follow setup instructions in scripts/03_training/README.md
+   Or set fincast.enabled: false in your config to disable FinCast.
+
+
+📊 Overriding prediction horizons: [7, 14, 28]
+
+⏱️  Overriding epochs: 100 → 30
+
+🔧 Overriding FinCast: True → False (disabled)
+   ⚠️  WARNING: PAN-NAN fusion typically requires FinCast for the PAN branch.
+   ⚠️  Training may fail or produce poor results without FinCast.
+📝 Using temporary config with overridden horizons, fincast (disabled): /var/folders/t3/7n146c0j1bj7_m93fvlpwgtm0000gn/T/tmpet9svy5s.yaml
+
+🌱 Setting random seed: 42
+   ✅ Random seed set for PyTorch, NumPy, and Python random module
+
+📂 Loading data from data/processed ...
+Traceback (most recent call last):
+  File "/Users/kuangfy/Desktop/230/230proj/scripts/training/pan_nan_fusion/train.py", line 302, in <module>
+    main()
+    ~~~~^^
+  File "/Users/kuangfy/Desktop/230/230proj/scripts/training/pan_nan_fusion/train.py", line 258, in main
+    decoder_train.train(
+    ~~~~~~~~~~~~~~~~~~~^
+        config_path=config_path_to_use,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<5 lines>...
+        model_dir=args.model_dir
+        ^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/kuangfy/Desktop/230/230proj/scripts/training/decoder_transformer/decoder_transformer_train.py", line 626, in train
+    train_X_np = np.load(data_dir / 'X_train.npy', allow_pickle=True)
+  File "/Users/kuangfy/miniconda3/lib/python3.13/site-packages/numpy/lib/_npyio_impl.py", line 454, in load
+    fid = stack.enter_context(open(os.fspath(file), "rb"))
+                              ~~~~^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: 'data/processed/X_train.npy'
+
+  ❌ Completed
+
+[27/27] Testing dimensions:
+  d_model: 128, d_ff: 512, sent_hidden: 128, fusion_hidden: 256
+  Run name: dim_128_512_128_256
+  🚀 Starting training...
+
+✅ TensorBoard utilities loaded from: /Users/kuangfy/Desktop/230/230proj/scripts/training/common/tensorboard_utils.py
+❌ FinCast import failed: FinCast submodule not found at: /Users/kuangfy/Desktop/230/230proj/external/fincast/src
+
+ℹ️  To use FinCast, follow setup instructions in scripts/03_training/README.md
+   Or set fincast.enabled: false in your config to disable FinCast.
+
+
+📊 Overriding prediction horizons: [7, 14, 28]
+
+⏱️  Overriding epochs: 100 → 30
+
+🔧 Overriding FinCast: True → False (disabled)
+   ⚠️  WARNING: PAN-NAN fusion typically requires FinCast for the PAN branch.
+   ⚠️  Training may fail or produce poor results without FinCast.
+📝 Using temporary config with overridden horizons, fincast (disabled): /var/folders/t3/7n146c0j1bj7_m93fvlpwgtm0000gn/T/tmpmizhf6uh.yaml
+
+🌱 Setting random seed: 42
+   ✅ Random seed set for PyTorch, NumPy, and Python random module
+
+📂 Loading data from data/processed ...
+Traceback (most recent call last):
+  File "/Users/kuangfy/Desktop/230/230proj/scripts/training/pan_nan_fusion/train.py", line 302, in <module>
+    main()
+    ~~~~^^
+  File "/Users/kuangfy/Desktop/230/230proj/scripts/training/pan_nan_fusion/train.py", line 258, in main
+    decoder_train.train(
+    ~~~~~~~~~~~~~~~~~~~^
+        config_path=config_path_to_use,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<5 lines>...
+        model_dir=args.model_dir
+        ^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/kuangfy/Desktop/230/230proj/scripts/training/decoder_transformer/decoder_transformer_train.py", line 626, in train
+    train_X_np = np.load(data_dir / 'X_train.npy', allow_pickle=True)
+  File "/Users/kuangfy/miniconda3/lib/python3.13/site-packages/numpy/lib/_npyio_impl.py", line 454, in load
+    fid = stack.enter_context(open(os.fspath(file), "rb"))
+                              ~~~~^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: 'data/processed/X_train.npy'
+
+  ❌ Completed
+
+================================================================================
+Search Complete!
+================================================================================
+Results saved to: dim_search_results_20251201_212804.json
+
+Next steps:
+1. Check TensorBoard for each run (look for run_name in logs/)
+2. Compare validation losses across dimension combinations
+3. Choose dimensions with best validation performance
+================================================================================
