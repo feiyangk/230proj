@@ -1,3 +1,7 @@
 # Ignore FinCast checkpoints (downloaded at training time)
 external/fincast/checkpoints/*.pth
 
+# macOS system files
+.DS_Store
+**/.DS_Store
+
