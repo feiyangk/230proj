@@ -46,11 +46,11 @@ data:
     synthetic_features:
       - sma_50
       - sma_200
-  start_date: '2020-11-13'  # 10 years of data
+  start_date: '2015-11-13'  # toggle: 5/10 years 
   end_date: '2025-11-13'
   frequency: 'daily'
   lookback_window: 192
-  prediction_horizons: [14]  # 1, 2, 4 weeks ahead (daily frequency)
+  prediction_horizons: [7,14,28]  # toggle: 1, 2, 4 weeks ahead 
   target: 'agriculture_basket_returns'
   target_type: 'agriculture_basket'
   target_metric: 'returns'
