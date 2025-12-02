@@ -33,7 +33,8 @@ def run_training(config_path, learning_rate, run_name, epochs=50, seed=42, extra
     if epochs:
         cmd.extend(["--epochs", str(epochs)])
     
-    result = subprocess.run(cmd, capture_output=True, text=True)
+    # Run with real-time output (not captured, so user can see progress)
+    result = subprocess.run(cmd)
     return result
 
 def extract_metrics(log_file):
@@ -90,7 +91,10 @@ def grid_search(config_path, learning_rates, epochs=50, seed=42, extra_args=None
             yaml.dump(config, f)
         
         try:
-            # Run training
+            print(f"  🚀 Starting training...")
+            print(f"  Command: python scripts/training/pan_nan_fusion/train.py --config {temp_config} --run-name {run_name} ...")
+            
+            # Run training with real-time output
             result = run_training(temp_config, lr, run_name, epochs, seed, extra_args)
             
             # Extract metrics (you'll need to parse from logs or checkpoints)

@@ -17,7 +17,7 @@ from torch.utils.tensorboard import SummaryWriter
 from typing import Dict, List, Optional
 
 
-def initialize_tensorboard_writer(config, model_name, eval_suffix):
+def initialize_tensorboard_writer(config, model_name, eval_suffix, run_name=None):
     """
     Initialize TensorBoard writer with proper directory structure.
     
@@ -25,6 +25,7 @@ def initialize_tensorboard_writer(config, model_name, eval_suffix):
         config: Configuration dictionary
         model_name: Name of the model (e.g., 'decoder', 'tft')
         eval_suffix: Suffix for evaluation mode (e.g., '_tf', '_ar')
+        run_name: Optional run name to include in directory (e.g., 'lr_search_1e-05')
     
     Returns:
         SummaryWriter instance or None if TensorBoard is disabled
@@ -33,7 +34,11 @@ def initialize_tensorboard_writer(config, model_name, eval_suffix):
         return None
     
     try:
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        # Use run_name if provided, otherwise use timestamp
+        if run_name:
+            dir_name = run_name
+        else:
+            dir_name = datetime.now().strftime('%Y%m%d_%H%M%S')
         
         # Check for managed TensorBoard directories
         tensorboard_log_dir = os.getenv('AIP_TENSORBOARD_LOG_DIR')
@@ -47,7 +52,7 @@ def initialize_tensorboard_writer(config, model_name, eval_suffix):
             print(f"   Logs will auto-sync to TensorBoard instance")
         elif sm_tensorboard_base:
             base_log_dir = Path(sm_tensorboard_base) / 'tensorboard'
-            log_dir = base_log_dir / f"{model_name}{eval_suffix}" / timestamp
+            log_dir = base_log_dir / f"{model_name}{eval_suffix}" / dir_name
             log_dir.mkdir(parents=True, exist_ok=True)
             writer = SummaryWriter(str(log_dir))
             print(f"\n📊 TensorBoard logs (SageMaker) → {log_dir}")
@@ -55,7 +60,7 @@ def initialize_tensorboard_writer(config, model_name, eval_suffix):
         else:
             # Local or manual TensorBoard - use local paths
             base_log_dir = Path(config.get('logging', {}).get('log_dir', 'logs/tensorboard'))
-            log_dir = base_log_dir / f"{model_name}{eval_suffix}" / timestamp
+            log_dir = base_log_dir / f"{model_name}{eval_suffix}" / dir_name
             log_dir.mkdir(parents=True, exist_ok=True)
             writer = SummaryWriter(str(log_dir))
             print(f"\n📊 TensorBoard logs → {log_dir}")

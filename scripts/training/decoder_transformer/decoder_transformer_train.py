@@ -886,7 +886,7 @@ def train(
     use_fusion = fusion_config.get('enabled', False)
     model_name_for_tb = 'pan-nan' if use_fusion else 'decoder'
     
-    writer = tb_utils.initialize_tensorboard_writer(config, model_name_for_tb, eval_suffix)
+    writer = tb_utils.initialize_tensorboard_writer(config, model_name_for_tb, eval_suffix, run_name=run_name)
     
     # Loss and optimizer
     criterion = nn.MSELoss()
