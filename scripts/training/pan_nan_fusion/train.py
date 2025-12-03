@@ -153,7 +153,7 @@ def main() -> None:
 
     with config_path.open("r") as f:
         config = yaml.safe_load(f)
-    
+
     # Debug: Print dimension values from loaded config to verify they're preserved
     if 'model' in config and 'fusion' in config:
         print(f"\n🔍 Loaded config dimensions from {config_path}:")
