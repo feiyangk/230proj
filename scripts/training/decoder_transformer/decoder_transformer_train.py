@@ -793,7 +793,9 @@ def train(
     
     # Determine architecture name based on model type
     if use_fusion and use_fincast:
-        architecture_name = "PAN-NAN Fusion (Price Attention Network + Non-price Attention Network)"
+        architecture_name = "PAN-NAN Fusion (Price Attention Network + Non-price Attention Network, with FinCast)"
+    elif use_fusion and not use_fincast:
+        architecture_name = "PAN-NAN Fusion (Price Attention Network + Non-price Attention Network, without FinCast)"
     elif use_fincast:
         architecture_name = "Decoder-Only Autoregressive Transformer with FinCast"
     else:
@@ -822,20 +824,23 @@ def train(
     print(f"  Gradient clip: {config['training'].get('gradient_clip_norm', None)}")
     
     # Initialize model (with or without FinCast/Fusion)
-    if use_fincast:
-        if not FINCAST_AVAILABLE or DecoderTransformerWithFinCast is None:
+    if use_fusion:
+        # Always build the fusion model when fusion is enabled, regardless of
+        # whether FinCast itself is enabled. The PAN branch will internally
+        # decide whether to use FinCast embeddings or raw prices based on
+        # config['fincast']['enabled'].
+        if use_fincast and (not FINCAST_AVAILABLE or DecoderTransformerWithFinCast is None):
             raise ImportError(
                 "FinCast is enabled in config but not available.\n"
                 "Please ensure the FinCast submodule is properly installed.\n"
                 "See scripts/03_training/README.md for setup instructions."
             )
-        
-        if use_fusion:
-            print(f"\n🔧 Initializing PAN-NAN Fusion model...")
-        else:
-            print(f"\n🔧 Initializing model with FinCast integration...")
-        
-        # Build model config from YAML settings
+
+        print(f"\n🔧 Initializing PAN-NAN Fusion model...")
+
+        # Build model config from YAML settings for the FinCast backbone.
+        # Even if fincast.enabled is False, this structure is passed through so
+        # the PAN branch can inspect it if needed.
         model_fincast_config = {
             'd_model': fincast_config.get('d_model', 1280),
             'n_heads': fincast_config.get('n_heads', 16),
@@ -846,35 +851,51 @@ def train(
             'pretrained_path': fincast_config.get('checkpoint_path'),
             'output_dim': fincast_config.get('output_dim', 128)
         }
-        
-        # Build model - FusionDecoderTransformer accepts fusion_config, standard doesn't
-        if use_fusion:
-            # When fusion is enabled, DecoderTransformerWithFinCast is swapped with FusionDecoderTransformer
-            # which accepts fusion_config parameter
-            # Debug: Print actual config values being used
-            print(f"\n🔍 Model Config Values (for debugging):")
-            print(f"   model.d_model: {config['model'].get('d_model')}")
-            print(f"   model.d_ff: {config['model'].get('d_ff')}")
-            print(f"   fusion.sentiment_hidden_dim: {fusion_config.get('sentiment_hidden_dim')}")
-            print(f"   fusion.fusion_hidden_dim: {fusion_config.get('fusion_hidden_dim')}")
-            model = DecoderTransformerWithFinCast(
-                config=config,
-                num_features=num_features,
-                fincast_config=model_fincast_config,
-                decoder_transformer_class=DecoderOnlyTransformerAR,
-                fusion_config=fusion_config
-            ).to(device)
-        else:
-            # Standard FinCast wrapper doesn't accept fusion_config
+
+        # When fusion is enabled, DecoderTransformerWithFinCast is swapped
+        # with FusionDecoderTransformer (by the PAN-NAN training entrypoint),
+        # which accepts fusion_config.
+        print(f"\n🔍 Model Config Values (for debugging):")
+        print(f"   model.d_model: {config['model'].get('d_model')}")
+        print(f"   model.d_ff: {config['model'].get('d_ff')}")
+        print(f"   fusion.sentiment_hidden_dim: {fusion_config.get('sentiment_hidden_dim')}")
+        print(f"   fusion.fusion_hidden_dim: {fusion_config.get('fusion_hidden_dim')}")
+        model = DecoderTransformerWithFinCast(
+            config=config,
+            num_features=num_features,
+            fincast_config=model_fincast_config,
+            decoder_transformer_class=DecoderOnlyTransformerAR,
+            fusion_config=fusion_config
+        ).to(device)
+    else:
+        # No fusion: fall back to FinCast-only decoder or plain decoder.
+        if use_fincast:
+            if not FINCAST_AVAILABLE or DecoderTransformerWithFinCast is None:
+                raise ImportError(
+                    "FinCast is enabled in config but not available.\n"
+                    "Please ensure the FinCast submodule is properly installed.\n"
+                    "See scripts/03_training/README.md for setup instructions."
+                )
+            print(f"\n🔧 Initializing model with FinCast integration...")
+            model_fincast_config = {
+                'd_model': fincast_config.get('d_model', 1280),
+                'n_heads': fincast_config.get('n_heads', 16),
+                'n_layers': fincast_config.get('n_layers', 50),
+                'd_ff': fincast_config.get('d_ff', 5120),
+                'dropout': fincast_config.get('dropout', 0.1),
+                'freeze': fincast_config.get('freeze_backbone', True),
+                'pretrained_path': fincast_config.get('checkpoint_path'),
+                'output_dim': fincast_config.get('output_dim', 128)
+            }
             model = DecoderTransformerWithFinCast(
                 config=config,
                 num_features=num_features,
                 fincast_config=model_fincast_config,
                 decoder_transformer_class=DecoderOnlyTransformerAR
             ).to(device)
-    else:
-        print(f"\n🔧 Initializing standard decoder transformer...")
-        model = DecoderOnlyTransformerAR(config, num_features).to(device)
+        else:
+            print(f"\n🔧 Initializing standard decoder transformer...")
+            model = DecoderOnlyTransformerAR(config, num_features).to(device)
     
     # Count parameters
     total_params = sum(p.numel() for p in model.parameters())

@@ -137,7 +137,18 @@ class SentimentFeatureBranch(nn.Module):
 
 
 class PANDecoderTransformer(nn.Module):
-    """Wrapper that turns decoder transformer + FinCast into the PAN branch."""
+    """
+    Price Attention Network (PAN) branch.
+
+    Behaviour depends on FinCast configuration:
+      - If config['fincast']['enabled'] is True and FinCast is available:
+          Use FinCastBackbone to embed each price series, then pass the
+          FinCast‑augmented features through the decoder transformer.
+      - If config['fincast']['enabled'] is False:
+          Skip FinCast entirely and feed raw price features (plus synthetic
+          features) to the decoder transformer. This keeps the PAN branch
+          usable even when FinCast is disabled.
+    """
 
     def __init__(
         self,
@@ -147,10 +158,18 @@ class PANDecoderTransformer(nn.Module):
     ) -> None:
         super().__init__()
 
-        if not FINCAST_AVAILABLE:
-            raise ImportError("FinCast not available; cannot build PANDecoderTransformer.")
-
         self.config = config
+        # Whether PAN should use FinCast or fall back to raw price features.
+        self.fincast_enabled = config.get("fincast", {}).get("enabled", False)
+
+        # If FinCast is requested but not actually available, fail fast.
+        if self.fincast_enabled and not FINCAST_AVAILABLE:
+            raise ImportError(
+                "FinCast requested for PANDecoderTransformer (fincast.enabled: true) "
+                "but FinCast is not available. Disable FinCast or install the FinCast "
+                "submodule/checkpoints."
+            )
+
         self.lookback = config["data"].get("lookback", config["data"].get("lookback_window"))
 
         self.feature_names = _load_feature_names()
@@ -173,21 +192,33 @@ class PANDecoderTransformer(nn.Module):
         ]
 
         fincast_config = fincast_config or {}
-        fincast_output_dim = fincast_config.get("output_dim", 128)
 
-        self.fincast = FinCastBackbone(
-            d_model=fincast_output_dim,
-            n_heads=16,
-            n_layers=50,
-            d_ff=128,
-            dropout=fincast_config.get("dropout", 0.1),
-            max_len=fincast_config.get("max_len", 512),
-            freeze=fincast_config.get("freeze", True),
-            pretrained_path=fincast_config.get("pretrained_path"),
-        )
+        if self.fincast_enabled:
+            # --- PAN with FinCast backbone ---
+            fincast_output_dim = fincast_config.get("output_dim", 128)
 
-        num_synth_features = len(self.synthetic_indices)
-        augmented_features = num_synth_features + len(self.price_indices) * fincast_output_dim
+            self.fincast = FinCastBackbone(
+                d_model=fincast_output_dim,
+                n_heads=16,
+                n_layers=50,
+                d_ff=128,
+                dropout=fincast_config.get("dropout", 0.1),
+                max_len=fincast_config.get("max_len", 512),
+                freeze=fincast_config.get("freeze", True),
+                pretrained_path=fincast_config.get("pretrained_path"),
+            )
+
+            num_synth_features = len(self.synthetic_indices)
+            augmented_features = num_synth_features + len(self.price_indices) * fincast_output_dim
+        else:
+            # --- PAN without FinCast backbone ---
+            # Simply pass raw price features (concatenated with synthetic features)
+            # to the decoder transformer. This keeps the overall fusion architecture
+            # intact while disabling the expensive FinCast component.
+            self.fincast = None
+            num_synth_features = len(self.synthetic_indices)
+            augmented_features = num_synth_features + len(self.price_indices)
+
         self.feature_norm = nn.LayerNorm(augmented_features)
 
         self.decoder_transformer = decoder_class(
@@ -233,28 +264,50 @@ class PANDecoderTransformer(nn.Module):
         return pan_pred, gdelt_features
 
     def _augment_with_fincast(self, price_series: torch.Tensor, synth_features: torch.Tensor) -> torch.Tensor:
-        batch_size, seq_len, num_prices = price_series.shape
+        """
+        Build PAN input features for the decoder transformer.
 
-        # Ensure price_series is on the same device as FinCast
-        device = next(self.fincast.parameters()).device if hasattr(self.fincast, 'parameters') else price_series.device
-        price_series = price_series.to(device)
-        
-        prices_flat = price_series.permute(0, 2, 1).contiguous().view(-1, seq_len)
-        fincast_hidden = self.fincast(prices_flat)
+        If FinCast is enabled, use FinCastBackbone to embed each price series.
+        Otherwise, just concatenate raw price features with synthetic features.
+        """
+        if self.fincast_enabled:
+            # --- Standard PAN path with FinCast embeddings ---
+            batch_size, seq_len, num_prices = price_series.shape
 
-        if fincast_hidden.size(1) != seq_len:
-            if fincast_hidden.size(1) > seq_len:
-                fincast_hidden = fincast_hidden[:, -seq_len:, :]
-            else:
-                pad_len = seq_len - fincast_hidden.size(1)
-                padding = torch.zeros(fincast_hidden.size(0), pad_len, fincast_hidden.size(2), device=fincast_hidden.device)
-                fincast_hidden = torch.cat([padding, fincast_hidden], dim=1)
+            # Ensure price_series is on the same device as FinCast
+            device = next(self.fincast.parameters()).device
+            price_series = price_series.to(device)
 
-        hidden_dim = fincast_hidden.size(2)
-        fincast_hidden = fincast_hidden.view(batch_size, num_prices, seq_len, hidden_dim)
-        fincast_hidden = fincast_hidden.permute(0, 2, 1, 3).contiguous().view(batch_size, seq_len, -1)
+            prices_flat = price_series.permute(0, 2, 1).contiguous().view(-1, seq_len)
+            fincast_hidden = self.fincast(prices_flat)
 
-        augmented = torch.cat([synth_features, fincast_hidden], dim=-1)
+            if fincast_hidden.size(1) != seq_len:
+                if fincast_hidden.size(1) > seq_len:
+                    fincast_hidden = fincast_hidden[:, -seq_len:, :]
+                else:
+                    pad_len = seq_len - fincast_hidden.size(1)
+                    padding = torch.zeros(
+                        fincast_hidden.size(0),
+                        pad_len,
+                        fincast_hidden.size(2),
+                        device=fincast_hidden.device,
+                    )
+                    fincast_hidden = torch.cat([padding, fincast_hidden], dim=1)
+
+            hidden_dim = fincast_hidden.size(2)
+            fincast_hidden = fincast_hidden.view(batch_size, num_prices, seq_len, hidden_dim)
+            fincast_hidden = fincast_hidden.permute(0, 2, 1, 3).contiguous().view(batch_size, seq_len, -1)
+
+            augmented = torch.cat([synth_features, fincast_hidden], dim=-1)
+        else:
+            # --- PAN without FinCast: use raw price features directly ---
+            # Concatenate synthetic features and raw prices along feature dimension.
+            # Shapes:
+            #   synth_features: [B, T, F_s]
+            #   price_series:   [B, T, F_p]
+            #   augmented:      [B, T, F_s + F_p]
+            augmented = torch.cat([synth_features, price_series], dim=-1)
+
         return self.feature_norm(augmented)
 
 
