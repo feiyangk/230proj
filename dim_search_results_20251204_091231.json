@@ -1,0 +1,130 @@
+[
+  {
+    "d_model": 96,
+    "d_ff": 384,
+    "sentiment_hidden_dim": 64,
+    "fusion_hidden_dim": 128,
+    "run_name": "dim_96_384_64_128",
+    "success": false
+  },
+  {
+    "d_model": 96,
+    "d_ff": 384,
+    "sentiment_hidden_dim": 64,
+    "fusion_hidden_dim": 256,
+    "run_name": "dim_96_384_64_256",
+    "success": false
+  },
+  {
+    "d_model": 96,
+    "d_ff": 384,
+    "sentiment_hidden_dim": 128,
+    "fusion_hidden_dim": 128,
+    "run_name": "dim_96_384_128_128",
+    "success": false
+  },
+  {
+    "d_model": 96,
+    "d_ff": 384,
+    "sentiment_hidden_dim": 128,
+    "fusion_hidden_dim": 256,
+    "run_name": "dim_96_384_128_256",
+    "success": false
+  },
+  {
+    "d_model": 96,
+    "d_ff": 512,
+    "sentiment_hidden_dim": 64,
+    "fusion_hidden_dim": 128,
+    "run_name": "dim_96_512_64_128",
+    "success": false
+  },
+  {
+    "d_model": 96,
+    "d_ff": 512,
+    "sentiment_hidden_dim": 64,
+    "fusion_hidden_dim": 256,
+    "run_name": "dim_96_512_64_256",
+    "success": false
+  },
+  {
+    "d_model": 96,
+    "d_ff": 512,
+    "sentiment_hidden_dim": 128,
+    "fusion_hidden_dim": 128,
+    "run_name": "dim_96_512_128_128",
+    "success": false
+  },
+  {
+    "d_model": 96,
+    "d_ff": 512,
+    "sentiment_hidden_dim": 128,
+    "fusion_hidden_dim": 256,
+    "run_name": "dim_96_512_128_256",
+    "success": false
+  },
+  {
+    "d_model": 128,
+    "d_ff": 384,
+    "sentiment_hidden_dim": 64,
+    "fusion_hidden_dim": 128,
+    "run_name": "dim_128_384_64_128",
+    "success": false
+  },
+  {
+    "d_model": 128,
+    "d_ff": 384,
+    "sentiment_hidden_dim": 64,
+    "fusion_hidden_dim": 256,
+    "run_name": "dim_128_384_64_256",
+    "success": false
+  },
+  {
+    "d_model": 128,
+    "d_ff": 384,
+    "sentiment_hidden_dim": 128,
+    "fusion_hidden_dim": 128,
+    "run_name": "dim_128_384_128_128",
+    "success": false
+  },
+  {
+    "d_model": 128,
+    "d_ff": 384,
+    "sentiment_hidden_dim": 128,
+    "fusion_hidden_dim": 256,
+    "run_name": "dim_128_384_128_256",
+    "success": false
+  },
+  {
+    "d_model": 128,
+    "d_ff": 512,
+    "sentiment_hidden_dim": 64,
+    "fusion_hidden_dim": 128,
+    "run_name": "dim_128_512_64_128",
+    "success": false
+  },
+  {
+    "d_model": 128,
+    "d_ff": 512,
+    "sentiment_hidden_dim": 64,
+    "fusion_hidden_dim": 256,
+    "run_name": "dim_128_512_64_256",
+    "success": false
+  },
+  {
+    "d_model": 128,
+    "d_ff": 512,
+    "sentiment_hidden_dim": 128,
+    "fusion_hidden_dim": 128,
+    "run_name": "dim_128_512_128_128",
+    "success": false
+  },
+  {
+    "d_model": 128,
+    "d_ff": 512,
+    "sentiment_hidden_dim": 128,
+    "fusion_hidden_dim": 256,
+    "run_name": "dim_128_512_128_256",
+    "success": false
+  }
+]
