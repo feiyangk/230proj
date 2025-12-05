@@ -211,16 +211,37 @@ def main():
         print("LaTeX TABLE VALUES")
         print("="*80)
         print("\\textbf{PAN-NAN-With-Fincast} \\\\")
-        print(f"    & {metrics.get('best_val_loss', 'N/A'):.4f} \\\\")
-        print(f"    & {metrics.get('best_val_mae', 'N/A'):.4f} \\\\")
-        print(f"    & {metrics.get('best_val_dir_acc', 0) * 100 if metrics.get('best_val_dir_acc') else 'N/A':.2f}\\% \\\\")
-        print(f"    & {test_loss if test_loss else 'N/A':.6f} \\\\")
-        print(f"    & {test_mae if test_mae else 'N/A':.6f} \\\\")
-        print(f"    & {test_rmse if test_rmse else 'N/A':.6f} \\\\")
-        print(f"    & {test_dir_acc * 100 if test_dir_acc else 'N/A':.2f}\\% \\\\")
+        val_loss = metrics.get('best_val_loss', 0)
+        val_mae = metrics.get('best_val_mae', 0)
+        val_dir_acc = metrics.get('best_val_dir_acc', 0)
+        print(f"    & {val_loss:.4f} \\\\")
+        print(f"    & {val_mae:.4f} \\\\")
+        print(f"    & {val_dir_acc * 100:.2f}\\% \\\\")
+        
+        # Format test metrics safely
+        if test_loss:
+            print(f"    & {test_loss:.6f} \\\\")
+        else:
+            print(f"    & N/A \\\\")
+        if test_mae:
+            print(f"    & {test_mae:.6f} \\\\")
+        else:
+            print(f"    & N/A \\\\")
+        if test_rmse:
+            print(f"    & {test_rmse:.6f} \\\\")
+        else:
+            print(f"    & N/A \\\\")
+        if test_dir_acc:
+            print(f"    & {test_dir_acc * 100:.2f}\\% \\\\")
+        else:
+            print(f"    & N/A \\\\")
+        
         for horizon in ['H7', 'H14', 'H28']:
             h_mae = metrics.get(f'val_{horizon.lower()}_mae') or metrics.get(f'{horizon.lower()}_mae')
-            print(f"    & {h_mae if h_mae else 'N/A':.6f} \\\\")
+            if h_mae:
+                print(f"    & {h_mae:.6f} \\\\")
+            else:
+                print(f"    & N/A \\\\")
 
 
 if __name__ == '__main__':

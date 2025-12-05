@@ -1,0 +1,148 @@
+\begin{table}[t]
+
+\centering
+
+\small
+
+\begin{tabular}{l l l l l l}
+
+\toprule
+
+\textbf{Metric} & \textbf{LSTM} & \textbf{TFT-No-Fincast} & \textbf{TFT-Final} & \textbf{PAN-NAN-No-Fincast} & \textbf{PAN-NAN-With-Fincast} \\
+
+\midrule
+
+\multicolumn{6}{l}{\textbf{Validation Metrics}} \\
+
+Best validation loss (MSE) 
+
+    & 0.5517 
+
+    & 0.5356
+
+    & 0.451168
+
+    & 0.9324 
+
+    & 0.9331 \\
+
+Best validation MAE 
+
+    & 0.5850 
+
+    & 0.55384
+
+    & 0.533402
+
+    & 0.7392 
+
+    & 0.7496 \\
+
+Directional accuracy 
+
+    & 0.51\%
+
+    & 71.65\%
+
+    & 70.50\%
+
+    & 68.63\%
+
+    & -- \\
+
+\multicolumn{6}{l}{\textbf{Test Set Results}} \\
+
+Test Loss (MSE) 
+
+    & 0.328464 
+
+    & 0.602884
+
+    & 1.021254
+
+    & 0.426631 
+
+    & 0.502778 \\
+
+Test MAE 
+
+    & 0.459052 
+
+    & 0.617535
+
+    & 0.845457
+
+    & 0.510364 
+
+    & 0.535234 \\
+
+Test RMSE 
+
+    & 0.579666
+
+    & 0.804553
+
+    & 1.038776
+
+    & 0.656283 
+
+    & 0.707337 \\
+
+Directional Accuracy (H1) 
+
+    & 47.98\%
+
+    & 47.13\%
+
+    & 29.89\%
+
+    & 66.78\%
+
+    & 33.55\% \\
+
+\multicolumn{6}{l}{\textbf{Per-Horizon MAE (Test Set)}} \\
+
+H7 MAE  
+
+    & 0.372671 
+
+    & 0.402471
+
+    & 0.488511
+
+    & 0.371871 
+
+    & 0.513744 \\
+
+H14 MAE 
+
+    & 0.456582 
+
+    & 0.600955
+
+    & 0.826217
+
+    & 0.516173 
+
+    & 0.713916 \\
+
+H28 MAE 
+
+    & 0.547903 
+
+    & 0.849179
+
+    & 1.221644
+
+    & 0.643049 
+
+    & 0.988153 \\
+
+\bottomrule
+
+\end{tabular}
+
+\caption{Comparison of LSTM, TFT-No-Fincast, TFT-Final, PAN-NAN-No-Fincast, and PAN-NAN-With-Fincast performance.}
+
+\end{table}
+
