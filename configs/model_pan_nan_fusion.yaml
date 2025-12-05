@@ -46,7 +46,7 @@ data:
     synthetic_features:
       - sma_50
       - sma_200
-  start_date: '2016-11-13'  # toggle: 5/9 years 
+  start_date: '2020-11-13'  # toggle: 5/9 years 
   end_date: '2025-11-13'
   frequency: 'daily'
   lookback_window: 192
