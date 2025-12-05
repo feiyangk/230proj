@@ -325,7 +325,7 @@ def log_attention_heatmaps(writer, model, val_loader, device, epoch, num_samples
                         if attn_range < 1e-8:
                             # If range is too small, use median-centered normalization with std
                             if attn_std < 1e-8:
-                            attn_map_norm = np.ones_like(attn_map) * 0.5
+                                attn_map_norm = np.ones_like(attn_map) * 0.5
                             else:
                                 # Use std-based normalization centered at median
                                 attn_map_norm = (attn_map - attn_median) / (3 * attn_std) + 0.5
