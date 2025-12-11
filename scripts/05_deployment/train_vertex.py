@@ -97,18 +97,6 @@ def update_config_with_hyperparameters(config_path: str, args) -> str:
     temp_config_path = '/tmp/vertex_config.yaml'
     with open(temp_config_path, 'w') as f:
         yaml.dump(config, f)
-    
-    # Print model-specific params
-    model_config = config.get('model', {})
-    if 'hidden_size' in model_config:
-    if 'lstm_layers' in model_config:
-    if 'd_model' in model_config:
-    if 'n_layers' in model_config:
-    if 'attention_heads' in model_config:
-    if 'n_heads' in model_config:
-    if 'dropout' in model_config:
-    if 'lookback_window' in config.get('data', {}):
-    
     return temp_config_path
 
 
@@ -331,7 +319,7 @@ def load_from_dataset_version(version, gcs_bucket=None):
     else:
         raise Exception(f"Failed to download processed data from gs://{gcs_bucket}/{gcs_processed_prefix}")
     
-    # Download raw data (for reference/debugging)
+    # Downlossad raw data (for reference/debugging)
     gcs_raw_prefix = f"datasets/{version}/raw/"
     if download_directory(gcs_raw_prefix, 'data/raw'):
     else:
