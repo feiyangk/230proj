@@ -156,8 +156,6 @@ def main() -> None:
 
     # Debug: Print dimension values from loaded config to verify they're preserved
     if 'model' in config and 'fusion' in config:
-        print(f"\n🔍 Loaded config dimensions from {config_path}:")
-        print(f"   d_model: {config['model'].get('d_model')}, "
               f"d_ff: {config['model'].get('d_ff')}, "
               f"sentiment_hidden: {config['fusion'].get('sentiment_hidden_dim')}, "
               f"fusion_hidden: {config['fusion'].get('fusion_hidden_dim')}")
@@ -167,7 +165,6 @@ def main() -> None:
         if "data" not in config:
             config["data"] = {}
         config["data"]["prediction_horizons"] = args.horizons
-        print(f"\n📊 Overriding prediction horizons: {args.horizons}")
     
     # Override batch size if provided via command line
     if args.batch_size is not None:
@@ -175,7 +172,6 @@ def main() -> None:
             config["training"] = {}
         original_batch_size = config["training"].get("batch_size", "N/A")
         config["training"]["batch_size"] = args.batch_size
-        print(f"\n📦 Overriding batch size: {original_batch_size} → {args.batch_size}")
     
     # Override epochs if provided via command line
     if args.epochs is not None:
@@ -183,7 +179,6 @@ def main() -> None:
             config["training"] = {}
         original_epochs = config["training"].get("epochs", "N/A")
         config["training"]["epochs"] = args.epochs
-        print(f"\n⏱️  Overriding epochs: {original_epochs} → {args.epochs}")
     
     # Override date range if provided via command line
     if args.start_date is not None or args.end_date is not None:
@@ -192,11 +187,9 @@ def main() -> None:
         if args.start_date is not None:
             original_start = config["data"].get("start_date", "N/A")
             config["data"]["start_date"] = args.start_date
-            print(f"\n📅 Overriding start date: {original_start} → {args.start_date}")
         if args.end_date is not None:
             original_end = config["data"].get("end_date", "N/A")
             config["data"]["end_date"] = args.end_date
-            print(f"\n📅 Overriding end date: {original_end} → {args.end_date}")
 
     # Override FinCast setting if provided via command line
     if args.no_fincast and args.fincast:
@@ -207,15 +200,11 @@ def main() -> None:
             config["fincast"] = {}
         original_fincast = config["fincast"].get("enabled", False)
         config["fincast"]["enabled"] = False
-        print(f"\n🔧 Overriding FinCast: {original_fincast} → False (disabled)")
-        print(f"   ⚠️  WARNING: PAN-NAN fusion typically requires FinCast for the PAN branch.")
-        print(f"   ⚠️  Training may fail or produce poor results without FinCast.")
     elif args.fincast:
         if "fincast" not in config:
             config["fincast"] = {}
         original_fincast = config["fincast"].get("enabled", False)
         config["fincast"]["enabled"] = True
-        print(f"\n🔧 Overriding FinCast: {original_fincast} → True (enabled)")
 
     # Check FinCast requirement (only if not explicitly disabled)
     if not config.get("fincast", {}).get("enabled", False) and not args.no_fincast:
@@ -257,10 +246,8 @@ def main() -> None:
             overrides.append("fincast (disabled)")
         elif args.fincast:
             overrides.append("fincast (enabled)")
-        print(f"📝 Using temporary config with overridden {', '.join(overrides)}: {tmp_config_path}")
         # Debug: Print dimension values to verify they're preserved
         if 'model' in config and 'fusion' in config:
-            print(f"🔍 Config dimensions - d_model: {config['model'].get('d_model')}, "
                   f"d_ff: {config['model'].get('d_ff')}, "
                   f"sentiment_hidden: {config['fusion'].get('sentiment_hidden_dim')}, "
                   f"fusion_hidden: {config['fusion'].get('fusion_hidden_dim')}")
@@ -285,10 +272,8 @@ def _ensure_fincast_checkpoint(config: dict) -> None:
     checkpoint_path = Path(fincast_cfg.get("checkpoint_path", "external/fincast/checkpoints/v1.pth"))
 
     if checkpoint_path.exists():
-        print(f"✅ FinCast checkpoint already present at {checkpoint_path}")
         return
 
-    print(f"📥 FinCast checkpoint not found at {checkpoint_path}. Downloading from Hugging Face...")
     try:
         from huggingface_hub import snapshot_download
     except ImportError as exc:
@@ -304,7 +289,6 @@ def _ensure_fincast_checkpoint(config: dict) -> None:
     snapshot_download(repo_id=repo_id, local_dir=str(checkpoint_dir))
 
     if checkpoint_path.exists():
-        print(f"✅ Download complete: {checkpoint_path}")
     else:
         raise FileNotFoundError(
             f"Downloaded repo {repo_id}, but expected checkpoint {checkpoint_path} was not found.\n"

@@ -26,10 +26,7 @@ try:
     TENSORBOARD_AVAILABLE = True
 except Exception as e:
     TENSORBOARD_AVAILABLE = False
-    print("⚠️  TensorBoard not available (import failed)")
-    print("   Training will continue without TensorBoard logging")
     # Uncomment to see full error:
-    # print(f"   Error: {e}")
 
 
 class LSTMMultiHorizon(nn.Module):
@@ -180,9 +177,7 @@ def train_epoch(
         
         # Progress indicator
         if (batch_idx + 1) % max(1, total_batches // 3) == 0 or batch_idx == total_batches - 1:
-            print(f"\r  Training: {batch_idx + 1}/{total_batches} batches (loss: {loss.item():.4f})", end='', flush=True)
     
-    print()  # New line after progress
     avg_loss = total_loss / len(train_loader)
     avg_unclipped = np.mean(unclipped_norms)
     avg_clipped = np.mean(clipped_norms)
@@ -207,7 +202,6 @@ def evaluate(
     all_targets = []
     
     total_batches = len(val_loader)
-    print(f"  Validation: 0/{total_batches} batches", end='', flush=True)
     
     with torch.no_grad():
         for batch_idx, (X_batch, y_batch) in enumerate(val_loader):
@@ -221,8 +215,6 @@ def evaluate(
             all_predictions.append(predictions.cpu().numpy())
             all_targets.append(y_batch.cpu().numpy())
     
-    print(f"\r  Validation: {total_batches}/{total_batches} batches", end='')
-    print()  # New line
     
     # Concatenate all batches
     all_predictions = np.concatenate(all_predictions, axis=0)
@@ -259,13 +251,9 @@ def train(
     with open(config_path, 'r') as f:
         config = yaml.safe_load(f)
     
-    print("\n" + "="*80)
-    print("   LSTM Multi-Horizon Forecasting")
-    print("="*80)
     
     # Load data if not provided
     if dataloaders is None:
-        print("\n📂 Loading data from data/processed/...")
         
         # Load preprocessed arrays
         train_X_np = np.load('data/processed/X_train.npy', allow_pickle=True)
@@ -308,7 +296,6 @@ def train(
         val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=0)
         test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=0)
         
-        print("✅ Data loaded!")
     else:
         train_loader = dataloaders['train']
         val_loader = dataloaders['val']
@@ -335,23 +322,13 @@ def train(
         num_horizons = sample_y.shape[0]
     
     # Print configuration
-    print("\n" + "="*80)
-    print("   LSTM Configuration")
-    print("="*80)
     
-    print(f"\n📊 Data Dimensions:")
-    print(f"  Lookback window: {lookback} timesteps")
-    print(f"  Number of features: {num_features}")
-    print(f"  Prediction horizons: {num_horizons}")
     
     # Display date range from config
     if 'data' in config:
         data_cfg = config['data']
         start_date = data_cfg.get('start_date', 'N/A')
         end_date = data_cfg.get('end_date', 'N/A')
-        print(f"\n📅 Date Range:")
-        print(f"  Start: {start_date}")
-        print(f"  End: {end_date}")
         
         # Try to get total samples from metadata
         try:
@@ -364,15 +341,10 @@ def train(
                     test_samples = metadata.get('test_samples', 0)
                     total = train_samples + val_samples + test_samples
                     if total > 0:
-                        print(f"  Total sequences: {total:,} (train: {train_samples}, val: {val_samples}, test: {test_samples})")
         except:
             pass
     
-    print(f"\n🖥️  Device: {device}")
     
-    print("\n" + "="*80)
-    print("   Model Architecture")
-    print("="*80)
     
     model_cfg = config['model']
     hidden_dim = model_cfg['hidden_dim']
@@ -380,18 +352,8 @@ def train(
     dropout = model_cfg['dropout']
     bidirectional = model_cfg.get('lstm', {}).get('bidirectional', False)
     
-    print(f"\nArchitecture: LSTM Multi-Horizon")
-    print(f"  hidden_dim: {hidden_dim}")
-    print(f"  num_layers: {num_layers}")
-    print(f"  dropout: {dropout}")
-    print(f"  bidirectional: {bidirectional}")
     
     train_cfg = config['training']
-    print(f"\nTraining:")
-    print(f"  Epochs: {train_cfg['epochs']}")
-    print(f"  Batch size: {train_cfg['batch_size']}")
-    print(f"  Learning rate: {train_cfg['learning_rate']}")
-    print(f"  Gradient clip: {train_cfg.get('gradient_clip_norm', 'None')}")
     
     # Initialize model
     model = LSTMMultiHorizon(
@@ -407,9 +369,6 @@ def train(
     total_params = sum(p.numel() for p in model.parameters())
     trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
     
-    print(f"\n🔧 Model Parameters:")
-    print(f"   Total: {total_params:,}")
-    print(f"   Trainable: {trainable_params:,}")
     
     # Setup TensorBoard (optional)
     writer = None
@@ -424,18 +383,13 @@ def train(
             # Vertex AI managed TensorBoard - logs auto-sync in real-time
             log_dir = tensorboard_log_dir
             writer = SummaryWriter(str(log_dir))
-            print(f"\n📊 TensorBoard (Vertex AI): {log_dir}")
-            print(f"   Logs will auto-sync to TensorBoard instance")
             
         else:
             # Local or manual TensorBoard - use local paths
             log_dir = Path('logs/tensorboard') / job_name
             log_dir.mkdir(parents=True, exist_ok=True)
             writer = SummaryWriter(str(log_dir))
-            print(f"\n📊 TensorBoard logs → {log_dir}")
-            print(f"   View with: tensorboard --logdir logs/tensorboard")
     else:
-        print(f"\n📊 TensorBoard disabled (not available)")
     
     # Loss and optimizer
     criterion = nn.MSELoss()
@@ -453,16 +407,7 @@ def train(
     clip_norm = train_cfg.get('gradient_clip_norm', None)
     early_stopping_patience = train_cfg.get('early_stopping', {}).get('patience', 10)
     
-    print(f"\n Starting training for {epochs} epochs...")
-    print(f"   Device: {device}")
-    print(f"   Batch size: {train_cfg['batch_size']}")
-    print(f"   Learning rate: {train_cfg['learning_rate']}")
-    print(f"   Gradient clipping: {clip_norm}")
-    print("\n" + "="*80)
     
-    print(f"\n⏱️  Estimated time per epoch: 0.5-2 minutes")
-    print(f"   Total estimated time for {epochs} epochs: {epochs * 1 / 60:.1f} hours")
-    print(f"   Training on {len(train_loader)} batches per epoch\n")
     
     training_start_time = time.time()
     
@@ -480,12 +425,6 @@ def train(
         epoch_time = time.time() - epoch_start_time
         total_elapsed = time.time() - training_start_time
         
-        print(f"\nEpoch {epoch+1}/{epochs} - {epoch_time/60:.1f} min (total: {total_elapsed/60:.1f} min)")
-        print(f"  Train Loss: {train_loss:.6f}")
-        print(f"  Val   Loss: {val_loss:.6f}, MAE: {mae:.6f}, RMSE: {rmse:.6f}")
-        print(f"  Dir Acc (H1): {dir_acc * 100:.2f}%")
-        print(f"  Grad Norm (unclipped): avg={avg_unclipped:.4f}, max={max_unclipped:.4f}")
-        print(f"  Grad Norm (clipped):   avg={avg_clipped:.4f}, max={max_clipped:.4f}")
         
         # Log to TensorBoard (if available)
         if writer is not None:
@@ -498,7 +437,6 @@ def train(
             writer.add_scalar('Gradients/Clipped_Avg', avg_clipped, epoch)
             writer.add_scalar('LR', train_cfg['learning_rate'], epoch)
         
-        print("")
         
         # Early stopping check
         if val_loss < best_val_loss:
@@ -517,26 +455,15 @@ def train(
                 'val_dir_acc': dir_acc,
                 'config': config
             }, checkpoint_path)
-            print(f"  ✅ Saved checkpoint: {checkpoint_path}")
         else:
             patience_counter += 1
             if patience_counter >= early_stopping_patience:
-                print(f"\n⏹️  Early stopping triggered (patience: {patience_counter})")
                 break
     
     # Close TensorBoard writer (if available)
     if writer is not None:
         writer.close()
-        print(f"\n📊 TensorBoard logs finalized")
     
-    print("\n" + "="*80)
-    print("   Training Complete")
-    print("="*80)
-    print(f"  Best validation loss: {best_val_loss:.4f}")
-    print(f"  Best validation MAE: {best_val_mae:.4f}")
-    print(f"  Model saved: {output_dir / 'lstm_best.pt'}")
     if not os.getenv('CLOUD_ML_JOB_ID'):
-        print(f"\n📊 View TensorBoard: tensorboard --logdir logs/tensorboard")
-    print("="*80)
     
     return model, best_val_loss

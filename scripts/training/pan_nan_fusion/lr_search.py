@@ -63,20 +63,10 @@ def grid_search(config_path, learning_rates, epochs=50, seed=42, extra_args=None
     """Grid search over learning rates."""
     results = []
     
-    print("="*80)
-    print("Learning Rate Grid Search")
-    print("="*80)
-    print(f"Testing {len(learning_rates)} learning rates")
-    print(f"Learning rates: {learning_rates}")
-    print(f"Epochs per run: {epochs}")
     if extra_args:
-        print(f"Extra args: {' '.join(extra_args)}")
-    print("="*80)
     
     for i, lr in enumerate(learning_rates):
         run_name = f"lr_search_{lr:.2e}".replace(".", "_").replace("-", "m")
-        print(f"\n[{i+1}/{len(learning_rates)}] Testing LR: {lr:.2e}")
-        print(f"Run name: {run_name}")
         
         # Modify config temporarily
         with open(config_path, 'r') as f:
@@ -91,8 +81,6 @@ def grid_search(config_path, learning_rates, epochs=50, seed=42, extra_args=None
             yaml.dump(config, f)
         
         try:
-            print(f"  🚀 Starting training...")
-            print(f"  Command: python scripts/training/pan_nan_fusion/train.py --config {temp_config} --run-name {run_name} ...")
             
             # Run training with real-time output
             result = run_training(temp_config, lr, run_name, epochs, seed, extra_args)
@@ -108,10 +96,8 @@ def grid_search(config_path, learning_rates, epochs=50, seed=42, extra_args=None
                 'log_file': f"training_{run_name}.log"
             })
             
-            print(f"  {'✅' if success else '❌'} Completed")
             
         except Exception as e:
-            print(f"  ❌ Error: {e}")
             results.append({
                 'learning_rate': lr,
                 'run_name': run_name,
@@ -129,15 +115,7 @@ def learning_rate_finder(config_path, min_lr=1e-6, max_lr=1e-2, num_trials=10, e
     # Generate learning rates on log scale
     learning_rates = np.logspace(np.log10(min_lr), np.log10(max_lr), num_trials)
     
-    print("="*80)
-    print("Learning Rate Finder (Exponential Search)")
-    print("="*80)
-    print(f"Range: {min_lr:.2e} to {max_lr:.2e}")
-    print(f"Trials: {num_trials}")
-    print(f"Epochs per trial: {epochs}")
     if extra_args:
-        print(f"Extra args: {' '.join(extra_args)}")
-    print("="*80)
     
     return grid_search(config_path, learning_rates.tolist(), epochs=epochs, seed=seed, extra_args=extra_args)
 
@@ -173,8 +151,6 @@ def main():
     
     # Print extra args that will be passed through
     if extra_args:
-        print(f"\n📋 Extra arguments to pass through: {' '.join(extra_args)}")
-        print("   (e.g., --no-fincast, --fincast, --download-fincast, --horizons, etc.)\n")
     
     if args.method == 'grid':
         if args.lrs:
@@ -204,15 +180,6 @@ def main():
     with open(results_file, 'w') as f:
         json.dump(results, f, indent=2)
     
-    print("\n" + "="*80)
-    print("Search Complete!")
-    print("="*80)
-    print(f"Results saved to: {results_file}")
-    print("\nNext steps:")
-    print("1. Check training logs for each run")
-    print("2. Compare validation losses")
-    print("3. Choose LR with best validation performance")
-    print("="*80)
 
 if __name__ == '__main__':
     main()

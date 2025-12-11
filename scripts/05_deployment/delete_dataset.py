@@ -30,28 +30,24 @@ def delete_dataset(version: str, model_type: str, delete_local=True, delete_gcs=
     import shutil
     
     full_version = f"{model_type}/{version}"
-    print(f"\n🗑️  Deleting dataset: {full_version}")
-    print("="*80)
     
     # 1. Delete local
     if delete_local:
         local_path = Path(f'data/datasets/{model_type}/{version}')
         if local_path.exists():
             shutil.rmtree(local_path)
-            print(f"✅ Deleted local: {local_path}")
         else:
-            print(f"⏭️  Local not found: {local_path}")
+            pass
     
     # 2. Delete GCS
     if delete_gcs:
         gcs_path = f"gs://{GCS_BUCKET}/datasets/{model_type}/{version}"
         cmd = f"gsutil -m rm -r {gcs_path}"
-        print(f"\n☁️  Deleting from GCS: {gcs_path}")
         result = subprocess.run(cmd, shell=True, capture_output=True)
         if result.returncode == 0:
-            print(f"✅ Deleted from GCS")
+            pass
         else:
-            print(f"⏭️  GCS path not found or already deleted")
+            pass
     
     # 3. Delete Managed Dataset
     if delete_managed:
@@ -63,13 +59,9 @@ def delete_dataset(version: str, model_type: str, delete_local=True, delete_gcs=
             datasets = aiplatform.TabularDataset.list(filter=f'display_name="{display_name}"')
             
             if datasets:
-                print(f"\n🗂️  Deleting Managed Dataset: {display_name}")
                 datasets[0].delete()
-                print(f"✅ Deleted Managed Dataset")
             else:
-                print(f"⏭️  Managed Dataset not found: {display_name}")
         except Exception as e:
-            print(f"⚠️  Could not delete Managed Dataset: {e}")
     
     # 4. Remove from registry
     registry_file = Path('datasets_registry.yaml')
@@ -81,11 +73,7 @@ def delete_dataset(version: str, model_type: str, delete_local=True, delete_gcs=
             del registry[full_version]
             with open(registry_file, 'w') as f:
                 yaml.dump(registry, f, default_flow_style=False)
-            print(f"\n✅ Removed from registry: {full_version}")
     
-    print(f"\n{'='*80}")
-    print(f"✅ Deletion complete!")
-    print(f"{'='*80}\n")
 
 
 if __name__ == '__main__':
@@ -99,7 +87,6 @@ if __name__ == '__main__':
     if not args.yes:
         response = input(f"\n⚠️  Delete {args.model_type}/{args.version}? [y/N]: ")
         if response.lower() != 'y':
-            print("Aborted.")
             sys.exit(0)
     
     delete_dataset(args.version, args.model_type)

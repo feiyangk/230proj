@@ -52,7 +52,6 @@ def run_training(config_path, run_name, epochs=50, seed=42, extra_args=None):
     
     # Print output in real-time
     if result.stdout:
-        print(result.stdout)
     
     return result
 
@@ -85,19 +84,8 @@ def grid_search(
     
     results = []
     
-    print("="*80)
-    print("Regularization Grid Search")
-    print("="*80)
-    print(f"Total combinations: {len(combinations)}")
-    print(f"model.dropout values: {model_dropout_values}")
-    print(f"training.weight_decay values: {weight_decay_values}")
-    print(f"training.gradient_clip_norm values: {clip_norm_values}")
     if fusion_dropout_values:
-        print(f"fusion.dropout values: {fusion_dropout_values}")
-    print(f"Epochs per run: {epochs}")
     if extra_args:
-        print(f"Extra args: {' '.join(extra_args)}")
-    print("="*80)
     
     for i, combo in enumerate(combinations):
         if fusion_dropout_values is not None:
@@ -107,12 +95,8 @@ def grid_search(
             fusion_dropout = None
         
         run_name = encode_reg_name(model_dropout, weight_decay, clip_norm, fusion_dropout)
-        print(f"\n[{i+1}/{len(combinations)}] Testing regularization:")
         if fusion_dropout is not None:
-            print(f"  model.dropout: {model_dropout}, weight_decay: {weight_decay}, clip_norm: {clip_norm}, fusion.dropout: {fusion_dropout}")
         else:
-            print(f"  model.dropout: {model_dropout}, weight_decay: {weight_decay}, clip_norm: {clip_norm}")
-        print(f"  Run name: {run_name}")
         
         # Modify config
         with open(config_path, 'r') as f:
@@ -139,7 +123,6 @@ def grid_search(
             yaml.dump(config, f)
         
         try:
-            print(f"  🚀 Starting training...")
             
             result = run_training(temp_config, run_name, epochs, seed, extra_args)
             
@@ -157,10 +140,8 @@ def grid_search(
             
             results.append(result_entry)
             
-            print(f"  {'✅' if success else '❌'} Completed")
             
         except Exception as e:
-            print(f"  ❌ Error: {e}")
             result_entry = {
                 'model_dropout': model_dropout,
                 'weight_decay': weight_decay,
@@ -197,19 +178,8 @@ def random_search(
     
     results = []
     
-    print("="*80)
-    print("Regularization Random Search")
-    print("="*80)
-    print(f"Number of trials: {num_trials}")
-    print(f"model.dropout range: {model_dropout_range}")
-    print(f"training.weight_decay range: {weight_decay_range}")
-    print(f"training.gradient_clip_norm range: {clip_norm_range}")
     if fusion_dropout_range:
-        print(f"fusion.dropout range: {fusion_dropout_range}")
-    print(f"Epochs per run: {epochs}")
     if extra_args:
-        print(f"Extra args: {' '.join(extra_args)}")
-    print("="*80)
     
     for i in range(num_trials):
         # Sample regularization values
@@ -221,12 +191,8 @@ def random_search(
             fusion_dropout = random.uniform(fusion_dropout_range[0], fusion_dropout_range[1])
         
         run_name = encode_reg_name(model_dropout, weight_decay, clip_norm, fusion_dropout)
-        print(f"\n[{i+1}/{num_trials}] Testing regularization:")
         if fusion_dropout is not None:
-            print(f"  model.dropout: {model_dropout:.4f}, weight_decay: {weight_decay:.4f}, clip_norm: {clip_norm:.4f}, fusion.dropout: {fusion_dropout:.4f}")
         else:
-            print(f"  model.dropout: {model_dropout:.4f}, weight_decay: {weight_decay:.4f}, clip_norm: {clip_norm:.4f}")
-        print(f"  Run name: {run_name}")
         
         # Modify config
         with open(config_path, 'r') as f:
@@ -244,7 +210,6 @@ def random_search(
             yaml.dump(config, f)
         
         try:
-            print(f"  🚀 Starting training...")
             
             result = run_training(temp_config, run_name, epochs, seed, extra_args)
             
@@ -262,10 +227,8 @@ def random_search(
             
             results.append(result_entry)
             
-            print(f"  {'✅' if success else '❌'} Completed")
             
         except Exception as e:
-            print(f"  ❌ Error: {e}")
             result_entry = {
                 'model_dropout': model_dropout,
                 'weight_decay': weight_decay,
@@ -324,8 +287,6 @@ def main():
     
     # Print extra args that will be passed through
     if extra_args:
-        print(f"\n📋 Extra arguments to pass through: {' '.join(extra_args)}")
-        print("   (e.g., --no-fincast, --fincast, --download-fincast, --horizons, etc.)\n")
     
     if args.method == 'grid':
         # Default values if not specified
@@ -369,16 +330,9 @@ def main():
     with open(results_file, 'w') as f:
         json.dump(results, f, indent=2)
     
-    print("\n" + "="*80)
-    print("Search Complete!")
-    print("="*80)
-    print(f"Results saved to: {results_file}")
-    print("\nNext steps:")
-    print("1. Check TensorBoard for each run (look for run_name in logs/)")
-    print("2. Compare validation losses across regularization combinations")
-    print("3. Choose regularization with best validation performance")
-    print("="*80)
 
 if __name__ == '__main__':
     main()
+
+
 

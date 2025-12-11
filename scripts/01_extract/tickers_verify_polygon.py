@@ -25,10 +25,6 @@ INDICATORS_TABLE = os.environ.get('BQ_INDICATORS_TABLE', 'technical_indicators')
 
 def print_header(text):
     """Print formatted header."""
-    print("\n" + "=" * 80)
-    print(f"   {text}")
-    print("=" * 80)
-    print()
 
 
 def load_config(config_path: str = 'configs/tickers.yaml') -> dict:
@@ -44,7 +40,6 @@ def load_config(config_path: str = 'configs/tickers.yaml') -> dict:
         with open(config_path, 'r') as f:
             return yaml.safe_load(f)
     except FileNotFoundError:
-        print(f"⚠️  Config file not found: {config_path}")
         return None
 
 
@@ -79,17 +74,9 @@ def analyze_data_coverage(client: bigquery.Client, table_id: str, ticker: str = 
     df = client.query(query).to_dataframe()
     
     if df.empty:
-        print("❌ No data found!")
         return
     
-    print("📊 Coverage Summary:\n")
     for _, row in df.iterrows():
-        print(f"Ticker: {row['ticker']} | Frequency: {row['frequency']}")
-        print(f"  Total rows: {row['total_rows']:,}")
-        print(f"  Date range: {row['earliest_date']} to {row['latest_date']}")
-        print(f"  Days covered: {row['date_range_days']}")
-        print(f"  Unique dates: {row['unique_dates']}")
-        print(f"  Avg bars/day: {row['bars_per_day']:.1f}")
         
         # Expected bars per day
         freq = row['frequency']
@@ -104,16 +91,13 @@ def analyze_data_coverage(client: bigquery.Client, table_id: str, ticker: str = 
         if expected_bars:
             actual = row['bars_per_day']
             coverage_pct = (actual / expected_bars) * 100
-            print(f"  Expected bars/day: {expected_bars}")
-            print(f"  Coverage: {coverage_pct:.1f}%")
             
             if coverage_pct < 80:
-                print(f"  ⚠️  WARNING: Low coverage! Expected {expected_bars} bars/day, got {actual:.1f}")
+                pass
             elif coverage_pct >= 99:
-                print(f"  ✅ Excellent coverage!")
+                pass
             else:
-                print(f"  ⚠️  Partial coverage")
-        print()
+                pass
 
 
 def find_date_gaps(client: bigquery.Client, table_id: str, ticker: str, frequency: str, min_gap_hours: int = 2, exclude_weekends: bool = False):
@@ -152,7 +136,6 @@ def find_date_gaps(client: bigquery.Client, table_id: str, ticker: str, frequenc
     df = client.query(query).to_dataframe()
     
     if df.empty:
-        print(f"✅ No gaps >= {min_gap_hours} hours found!")
         return
     
     # Filter out weekend gaps if requested
@@ -193,22 +176,14 @@ def find_date_gaps(client: bigquery.Client, table_id: str, ticker: str, frequenc
                 non_weekend_gaps.append(row)
         
         if weekend_gaps:
-            print(f"ℹ️  Excluded {len(weekend_gaps)} weekend/holiday gaps (expected for stock market data)")
         
         if not non_weekend_gaps:
-            print(f"✅ No unexpected gaps found (all {original_count} gaps are weekends/holidays)")
             return
         
         df = pd.DataFrame(non_weekend_gaps)
-        print(f"⚠️  Found {len(df)} unexpected gaps >= {min_gap_hours} hours:\n")
     else:
-        print(f"⚠️  Found {len(df)} gaps >= {min_gap_hours} hours:\n")
     
     for idx, row in df.iterrows():
-        print(f"  Gap #{idx+1}: {row['gap_hours']:.1f} hours")
-        print(f"    From: {row['gap_start']}")
-        print(f"    To:   {row['gap_end']}")
-        print()
 
 
 def check_duplicates(client: bigquery.Client, table_id: str, ticker: str = None):
@@ -234,13 +209,9 @@ def check_duplicates(client: bigquery.Client, table_id: str, ticker: str = None)
     df = client.query(query).to_dataframe()
     
     if df.empty:
-        print("✅ No duplicates found!")
         return
     
-    print(f"❌ Found {len(df)} duplicate timestamp/ticker/frequency combinations:\n")
     for _, row in df.iterrows():
-        print(f"  {row['ticker']} @ {row['timestamp']} ({row['frequency']}): {row['duplicate_count']} copies")
-    print()
 
 
 def weekday_breakdown(client: bigquery.Client, table_id: str, ticker: str = None, frequency: str = None):
@@ -272,12 +243,10 @@ def weekday_breakdown(client: bigquery.Client, table_id: str, ticker: str = None
     df = client.query(query).to_dataframe()
     
     if df.empty:
-        print("❌ No data found")
         return
     
     # Group by ticker and frequency
     for (ticker_name, freq), group in df.groupby(['ticker', 'frequency']):
-        print(f"\n📅 {ticker_name} ({freq}):\n")
         total_bars = group['bar_count'].sum()
         
         for _, row in group.iterrows():
@@ -290,10 +259,7 @@ def weekday_breakdown(client: bigquery.Client, table_id: str, ticker: str = None
             bar_length = int(pct / 2)  # Scale to 50 chars max
             bar = '█' * bar_length
             
-            print(f"  {day_name:9s}: {bar_count:6,} bars ({pct:5.1f}%) | {unique_dates:3} days | {bar}")
         
-        print(f"\n  Total: {total_bars:,} bars")
-    print()
 
 
 def analyze_indicator_coverage(client: bigquery.Client, table_id: str, ticker: str = None, frequency: str = None):
@@ -335,15 +301,9 @@ def analyze_indicator_coverage(client: bigquery.Client, table_id: str, ticker: s
     df = client.query(query).to_dataframe()
     
     if df.empty:
-        print("❌ No data found!")
         return
     
-    print("📊 Indicator Coverage Summary:\n")
     for _, row in df.iterrows():
-        print(f"Ticker: {row['ticker']} | Frequency: {row['frequency']}")
-        print(f"  Total rows: {row['total_rows']:,}")
-        print(f"  Date range: {row['earliest_date']} to {row['latest_date']}")
-        print()
         
         total = row['total_rows']
         indicators = [
@@ -359,12 +319,9 @@ def analyze_indicator_coverage(client: bigquery.Client, table_id: str, ticker: s
             ('MACD', row['macd_count']),
         ]
         
-        print("  Indicator Coverage:")
         for ind_name, count in indicators:
             coverage = (count / total * 100) if total > 0 else 0
             status = "✅" if coverage >= 99 else "⚠️ " if coverage >= 80 else "❌"
-            print(f"    {status} {ind_name:10s}: {count:6,} / {total:6,} ({coverage:5.1f}%)")
-        print()
 
 
 def sample_data(client: bigquery.Client, table_id: str, ticker: str, frequency: str, limit: int = 10, data_type: str = 'raw'):
@@ -399,21 +356,14 @@ def sample_data(client: bigquery.Client, table_id: str, ticker: str, frequency: 
     df_last = client.query(query_last).to_dataframe()
     
     if df_first.empty and df_last.empty:
-        print("❌ No data found")
         return
     
     if not df_first.empty:
-        print(f"\n📅 OLDEST {len(df_first)} ENTRIES:")
-        print(df_first.to_string(index=False))
-        print()
     
     if not df_last.empty:
-        print(f"\n📅 NEWEST {len(df_last)} ENTRIES:")
         # Reverse to show in chronological order (oldest to newest within this set)
         df_last_sorted = df_last.sort_values('timestamp')
-        print(df_last_sorted.to_string(index=False))
     
-    print()
 
 
 def main():
@@ -450,51 +400,34 @@ def main():
     args = parser.parse_args()
     
     if not PROJECT_ID:
-        print("❌ Error: GCP_PROJECT_ID not set in environment")
         sys.exit(1)
     
     print_header("Polygon Data Verification")
-    print(f"Project: {PROJECT_ID}")
-    print(f"Dataset: {DATASET_ID}")
-    print(f"Table: {TABLE_NAME}")
     
     # Load tickers from config if no specific ticker provided
     tickers_to_verify = []
     if args.ticker:
         tickers_to_verify = [args.ticker]
-        print(f"Ticker: {args.ticker}")
     else:
         config = load_config(args.config)
         if config and 'tickers' in config:
             tickers_to_verify = config['tickers']
-            print(f"Verifying all tickers from config: {len(tickers_to_verify)} tickers")
-            print(f"  Tickers: {', '.join(tickers_to_verify[:10])}{'...' if len(tickers_to_verify) > 10 else ''}")
         else:
-            print("⚠️  No tickers specified and config file not found or empty")
-            print("   Use --ticker to specify a ticker or ensure config file exists")
     
     if args.frequency:
-        print(f"Frequency filter: {args.frequency}")
-    print()
     
     try:
         client = bigquery.Client(project=PROJECT_ID)
     except Exception as e:
-        print(f"❌ Failed to connect to BigQuery: {str(e)}")
         sys.exit(1)
     
     # Run analyses based on data type
     if args.data_type in ['raw', 'both']:
         table_id = f"{PROJECT_ID}.{DATASET_ID}.{TABLE_NAME}"
-        print(f"\n{'='*80}")
-        print("   RAW OHLCV DATA VERIFICATION")
-        print(f"{'='*80}\n")
         
         # If verifying multiple tickers, run checks for each
         if len(tickers_to_verify) > 1:
             for idx, ticker in enumerate(tickers_to_verify, 1):
-                print(f"\n[{idx}/{len(tickers_to_verify)}] Verifying {ticker}...")
-                print("-" * 80)
                 
                 analyze_data_coverage(client, table_id, ticker, args.frequency)
                 check_duplicates(client, table_id, ticker)
@@ -517,15 +450,10 @@ def main():
     
     if args.data_type in ['indicators', 'both']:
         indicators_table_id = f"{PROJECT_ID}.{DATASET_ID}.{INDICATORS_TABLE}"
-        print(f"\n{'='*80}")
-        print("   TECHNICAL INDICATORS VERIFICATION")
-        print(f"{'='*80}\n")
         
         # If verifying multiple tickers, run checks for each
         if len(tickers_to_verify) > 1:
             for idx, ticker in enumerate(tickers_to_verify, 1):
-                print(f"\n[{idx}/{len(tickers_to_verify)}] Verifying {ticker} indicators...")
-                print("-" * 80)
                 
                 analyze_data_coverage(client, indicators_table_id, ticker, args.frequency)
                 check_duplicates(client, indicators_table_id, ticker)

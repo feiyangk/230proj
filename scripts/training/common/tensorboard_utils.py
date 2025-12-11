@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 """
-TensorBoard utility functions for consistent logging across training scripts.
 """
 
 import os
@@ -30,7 +29,6 @@ def initialize_tensorboard_writer(config, model_name, eval_suffix, run_name=None
     Returns:
         SummaryWriter instance or None if TensorBoard is disabled
     """
-    if not config.get('logging', {}).get('tensorboard', False):
         return None
     
     try:
@@ -48,29 +46,19 @@ def initialize_tensorboard_writer(config, model_name, eval_suffix, run_name=None
             # Vertex AI managed TensorBoard - logs auto-sync
             log_dir = tensorboard_log_dir
             writer = SummaryWriter(str(log_dir))
-            print(f"\n📊 TensorBoard (Vertex AI): {log_dir}")
-            print(f"   Logs will auto-sync to TensorBoard instance")
         elif sm_tensorboard_base:
             base_log_dir = Path(sm_tensorboard_base) / 'tensorboard'
             log_dir = base_log_dir / f"{model_name}{eval_suffix}" / dir_name
             log_dir.mkdir(parents=True, exist_ok=True)
             writer = SummaryWriter(str(log_dir))
-            print(f"\n📊 TensorBoard logs (SageMaker) → {log_dir}")
-            print(f"   These logs will be available in the SageMaker trial artifacts")
         else:
             # Local or manual TensorBoard - use local paths
-            base_log_dir = Path(config.get('logging', {}).get('log_dir', 'logs/tensorboard'))
             log_dir = base_log_dir / f"{model_name}{eval_suffix}" / dir_name
             log_dir.mkdir(parents=True, exist_ok=True)
             writer = SummaryWriter(str(log_dir))
-            print(f"\n📊 TensorBoard logs → {log_dir}")
-            print(f"   View with: tensorboard --logdir {base_log_dir}")
         
         return writer
     except Exception as e:
-        print(f"\n⚠️  TensorBoard not available: {type(e).__name__}")
-        print(f"   Error details: {str(e)}")
-        print("   Training will continue without TensorBoard logging")
         return None
 
 
@@ -231,7 +219,6 @@ def log_hyperparameters(writer, hparams, metrics):
         writer.add_hparams(hparams, metrics)
     except Exception as e:
         # Fallback: log as scalars if add_hparams fails
-        print(f"⚠️  Could not log hyperparameters: {e}")
         for key, value in hparams.items():
             if isinstance(value, (int, float)):
                 writer.add_scalar(f'HParams/{key}', value, 0)
@@ -279,7 +266,6 @@ def log_attention_heatmaps(writer, model, val_loader, device, epoch, num_samples
         
         # Check if model has transformer encoder
         if not hasattr(base_model, 'transformer_encoder'):
-            print(f"  ⚠️  Base model does not have transformer_encoder")
             return
         
         # Get a few samples from validation set
@@ -383,12 +369,9 @@ def log_attention_heatmaps(writer, model, val_loader, device, epoch, num_samples
                     break
         
         if attention_weights_found:
-            print(f"  ✅ Logged attention heatmaps")
         else:
-            print(f"  ⚠️  No attention weights extracted")
     
     except Exception as e:
-        print(f"  ⚠️  Could not log attention heatmaps: {e}")
         import traceback
         traceback.print_exc()
 

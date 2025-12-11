@@ -24,7 +24,6 @@ PROJECT_ID = os.getenv('GCP_PROJECT_ID')
 REGION = os.getenv('GCP_REGION', 'us-central1')
 
 if not PROJECT_ID:
-    print("⚠️  GCP_PROJECT_ID not set in .env file")
     PROJECT_ID = input("Enter project ID: ").strip()
 
 
@@ -38,25 +37,15 @@ def list_hp_tuning_jobs(limit=10):
     )[:limit]
     
     if not jobs:
-        print("❌ No hyperparameter tuning jobs found.")
         return
     
-    print(f"\n{'='*80}")
-    print(f"   Recent Hyperparameter Tuning Jobs")
-    print(f"{'='*80}\n")
     
     for i, job in enumerate(jobs, 1):
         status = job.state.name
         status_emoji = "✅" if status == "JOB_STATE_SUCCEEDED" else "🔄" if "RUNNING" in status else "❌"
         
-        print(f"{i}. {status_emoji} {job.display_name}")
-        print(f"   ID: {job.name.split('/')[-1]}")
-        print(f"   Status: {status}")
-        print(f"   Created: {job.create_time}")
         if hasattr(job, 'trial_job_spec'):
             trials = len(job.trials) if hasattr(job, 'trials') and job.trials else 0
-            print(f"   Trials: {trials}")
-        print()
     
     return jobs
 
@@ -78,24 +67,16 @@ def get_hp_tuning_results(job_id_or_name, export_csv=None, sort_by='val_loss'):
     else:
         resource_name = job_id_or_name
     
-    print(f"\n🔍 Fetching results for: {resource_name.split('/')[-1]}...\n")
     
     try:
         hp_job = aiplatform.HyperparameterTuningJob.get(resource_name)
     except Exception as e:
-        print(f"❌ Error fetching job: {e}")
         return None
     
-    print(f"Job: {hp_job.display_name}")
-    print(f"Status: {hp_job.state.name}")
-    print(f"Created: {hp_job.create_time}")
     
     if not hasattr(hp_job, 'trials') or not hp_job.trials:
-        print("\n⚠️  No trials found yet. Job may still be starting.")
         return None
     
-    print(f"Total Trials: {len(hp_job.trials)}")
-    print(f"{'='*80}\n")
     
     # Extract trial data
     trials_data = []
@@ -131,36 +112,25 @@ def get_hp_tuning_results(job_id_or_name, export_csv=None, sort_by='val_loss'):
     pd.set_option('display.max_colwidth', 20)
     
     # Print summary statistics
-    print("\n📊 Metrics Summary:")
-    print("="*80)
     metrics_cols = [col for col in df.columns if col not in ['trial_id', 'state']]
     if metrics_cols:
         summary = df[metrics_cols].describe().loc[['mean', 'min', 'max']]
-        print(summary.to_string())
     
     # Print full table
-    print(f"\n\n📋 All Trials (sorted by {sort_by}):")
-    print("="*80)
-    print(df.to_string(index=False))
     
     # Highlight best trial
     if sort_by in df.columns:
         best_idx = df[sort_by].idxmax() if 'accuracy' in sort_by.lower() else df[sort_by].idxmin()
         best_trial = df.loc[best_idx]
         
-        print(f"\n\n🏆 Best Trial (by {sort_by}):")
-        print("="*80)
-        print(f"Trial ID: {best_trial['trial_id']}")
         for col in df.columns:
             if col not in ['trial_id', 'state']:
-                print(f"{col}: {best_trial[col]}")
     
     # Export to CSV if requested
     if export_csv:
         csv_path = Path(export_csv)
         csv_path.parent.mkdir(parents=True, exist_ok=True)
         df.to_csv(csv_path, index=False)
-        print(f"\n💾 Results exported to: {csv_path}")
     
     return df
 

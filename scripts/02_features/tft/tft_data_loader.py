@@ -86,9 +86,6 @@ class MultiTickerDataLoader:
         raw_table = self.config['bigquery']['ticker']['raw_table']
         synthetic_table = self.config['bigquery']['ticker']['synthetic_table']
         
-        print(f"Fetching data for {len(self.tickers)} ticker(s): {', '.join(self.tickers)}")
-        print(f"Frequency: {self.frequency}")
-        print(f"Date range: {self.start_date} to {self.end_date}")
         
         # Build feature lists for SQL
         raw_cols = ', '.join([f'r.{col}' for col in self.raw_features])
@@ -116,10 +113,8 @@ class MultiTickerDataLoader:
         """
         
         df = self.client.query(query).to_dataframe()
-        print(f"✅ Fetched {len(df):,} total rows")
         for ticker in self.tickers:
             ticker_rows = len(df[df['ticker'] == ticker])
-            print(f"   {ticker}: {ticker_rows:,} rows")
         
         return df
     
@@ -131,8 +126,6 @@ class MultiTickerDataLoader:
         dataset_id = self.config['bigquery']['dataset_id']
         gdelt_table = self.config['bigquery']['gdelt']['table']
         
-        print(f"Fetching GDELT sentiment data ({self.gdelt_frequency})...")
-        print(f"  Topic groups: {', '.join(self.gdelt_topic_groups)}")
         
         # Build feature list for SQL
         gdelt_cols = ', '.join([f'g.{col}' for col in self.gdelt_features])
@@ -155,24 +148,18 @@ class MultiTickerDataLoader:
         df = self.client.query(query).to_dataframe()
         
         if len(df) == 0:
-            print(f"⚠️  Warning: No GDELT data found for topic groups: {', '.join(self.gdelt_topic_groups)}")
-            print(f"   Make sure data is loaded for these topic groups at frequency '{self.gdelt_frequency}'")
             return None
         
-        print(f"✅ Fetched {len(df):,} GDELT rows")
         
         # Show breakdown by topic group
         for topic_group in self.gdelt_topic_groups:
             count = len(df[df['topic_group_id'] == topic_group])
-            print(f"   {topic_group}: {count:,} rows")
         
         # If multiple topic groups, aggregate them (average sentiment across groups)
         if len(self.gdelt_topic_groups) > 1:
-            print(f"  Aggregating {len(self.gdelt_topic_groups)} topic groups (averaging sentiment)...")
             # Group by timestamp and average the sentiment features
             agg_dict = {col: 'mean' for col in self.gdelt_features}
             df = df.groupby('timestamp').agg(agg_dict).reset_index()
-            print(f"  ✅ Aggregated to {len(df):,} rows")
         else:
             # Single topic group - just drop the topic_group_id column
             df = df.drop(columns=['topic_group_id'])
@@ -187,7 +174,6 @@ class MultiTickerDataLoader:
         agriculture_tickers = ['WEAT', 'SOYB', 'RJA']
         ticker_list = "', '".join(agriculture_tickers)
         
-        print(f"\nFetching agriculture basket for target: {', '.join(agriculture_tickers)}...")
         
         query = f"""
         SELECT 
@@ -204,8 +190,6 @@ class MultiTickerDataLoader:
         df = self.client.query(query).to_dataframe()
         
         if len(df) == 0:
-            print("⚠️  Warning: No agriculture basket data found!")
-            print(f"   Make sure WEAT, SOYB, RJA are loaded for frequency '{self.frequency}'")
             return None
         
         # Pivot to get one column per ticker
@@ -221,27 +205,21 @@ class MultiTickerDataLoader:
         # Keep only the average column
         result = df_pivot[['agriculture_basket_close']].reset_index()
         
-        print(f"✅ Fetched {len(result):,} agriculture basket rows")
         for ticker in agriculture_tickers:
             if ticker in df_pivot.columns:
                 count = df_pivot[ticker].notna().sum()
-                print(f"   {ticker}: {count:,} rows")
         
         # Show statistics on ticker availability
         ticker_counts = df_pivot['num_tickers_available'].value_counts().sort_index()
-        print(f"\n   Ticker availability per timestamp:")
         for num_tickers, count in ticker_counts.items():
-            print(f"      {int(num_tickers)} ticker(s): {count:,} timestamps ({count/len(result)*100:.1f}%)")
         
         return result
     
     def compute_basket_target(self, ticker_df: pd.DataFrame, basket_df: pd.DataFrame) -> pd.DataFrame:
         """Join agriculture basket close prices to ticker data for target computation."""
         if basket_df is None:
-            print("⚠️  Warning: No agriculture basket data - cannot compute target!")
             return ticker_df
         
-        print("\nJoining agriculture basket for target computation...")
         
         # Left join to preserve all ticker timestamps
         df = ticker_df.merge(basket_df, on='timestamp', how='left')
@@ -251,7 +229,6 @@ class MultiTickerDataLoader:
         if missing_before > 0:
             df = self.forward_fill_with_stats(df, ['agriculture_basket_close'], context="Agriculture basket")
         
-        print(f"✅ Joined agriculture basket, shape: {df.shape}")
         
         return df
     
@@ -270,18 +247,14 @@ class MultiTickerDataLoader:
         removed_rows = initial_rows - len(df)
         
         if removed_rows > 0:
-            print(f"🗓️  Filtered out {removed_rows:,} weekend rows ({removed_rows/initial_rows*100:.1f}%)")
-            print(f"   Remaining: {len(df):,} weekday rows")
         
         return df
     
     def forward_fill_with_stats(self, df: pd.DataFrame, columns: List[str], context: str = "") -> pd.DataFrame:
-        """Forward fill missing values with detailed statistics logging.
         
         Args:
             df: DataFrame to fill
             columns: List of column names to forward fill
-            context: Description for logging (e.g., 'GDELT features', 'All features')
         
         Returns:
             DataFrame with forward filled values
@@ -319,22 +292,14 @@ class MultiTickerDataLoader:
         
         # Log statistics if enabled
         if self.forward_fill_log_stats and fill_stats:
-            print(f"\n🔧 Forward Fill Statistics{' (' + context + ')' if context else ''}:")
-            print(f"   Max consecutive fills: {self.forward_fill_max_limit} periods")
-            print(f"   Total values filled: {total_filled:,}")
-            print(f"\n   {'Column':<30} {'Missing':<10} {'Filled':<10} {'Still Missing':<15} {'% Filled':<10}")
-            print(f"   {'-'*85}")
             
             for col, stats in fill_stats.items():
-                print(f"   {col:<30} {stats['missing_before']:<10,} {stats['filled']:<10,} "
                       f"{stats['still_missing']:<15,} {stats['pct_filled']:<10.1f}%")
             
             # Warn about columns that still have missing values
             still_missing_cols = [col for col, stats in fill_stats.items() if stats['still_missing'] > 0]
             if still_missing_cols:
-                print(f"\n   ⚠️  Warning: {len(still_missing_cols)} column(s) still have missing values after forward fill:")
                 for col in still_missing_cols:
-                    print(f"      - {col}: {fill_stats[col]['still_missing']:,} missing")
         
         return df
     
@@ -343,7 +308,6 @@ class MultiTickerDataLoader:
         if gdelt_df is None or not self.use_gdelt:
             return ticker_df
         
-        print("Joining GDELT sentiment features...")
         
         # Left join to preserve all ticker timestamps
         df = ticker_df.merge(gdelt_df, on='timestamp', how='left')
@@ -357,7 +321,6 @@ class MultiTickerDataLoader:
                 df['num_articles'] = np.log1p(df['num_articles'])  # Log transform
             if 'num_sources' in df.columns:
                 df['num_sources'] = np.log1p(df['num_sources'])  # Log transform
-            print("✅ Normalized GDELT article/source counts (log1p)")
         
         # Add lagged sentiment features if configured
         if self.gdelt_include_lags and 'weighted_avg_tone' in df.columns:
@@ -369,9 +332,7 @@ class MultiTickerDataLoader:
             
             # Forward fill NaN from initial lags
             df = self.forward_fill_with_stats(df, lag_cols, context="GDELT lagged features")
-            print(f"✅ Added lagged sentiment features: {self.gdelt_lag_periods}")
         
-        print(f"✅ Joined GDELT features, final shape: {df.shape}")
         
         return df
     
@@ -386,7 +347,6 @@ class MultiTickerDataLoader:
             df = self.join_gdelt_features(ticker_df, gdelt_df)
         else:
             df = ticker_df
-            print("⚠️  GDELT features disabled in config")
         
         # Fetch and join agriculture basket for target computation
         basket_df = self.fetch_agriculture_basket()
@@ -399,11 +359,8 @@ class MultiTickerDataLoader:
         missing = df.isnull().sum()
         if missing.any():
             missing_cols = missing[missing > 0].index.tolist()
-            print(f"\n⚠️  Warning: {len(missing_cols)} column(s) have missing values:")
             for col in missing_cols[:10]:  # Show first 10
-                print(f"   - {col}: {missing[col]:,} missing ({missing[col]/len(df)*100:.2f}%)")
             if len(missing_cols) > 10:
-                print(f"   ... and {len(missing_cols)-10} more")
             
             # Forward fill remaining missing values with stats
             df = self.forward_fill_with_stats(df, missing_cols, context="Remaining features")
@@ -412,9 +369,7 @@ class MultiTickerDataLoader:
             still_missing = df.isnull().sum()
             if still_missing.any():
                 still_missing_cols = still_missing[still_missing > 0].index.tolist()
-                print(f"\n🔙 Backward filling {len(still_missing_cols)} column(s) for initial NaNs...")
                 df = df.bfill()
-                print(f"✅ Backward fill complete")
         
         return df
     
@@ -441,8 +396,6 @@ class MultiTickerDataLoader:
         df['month_sin'] = np.sin(2 * np.pi * df['month'] / 12)
         df['month_cos'] = np.cos(2 * np.pi * df['month'] / 12)
         
-        print(f"✅ Added time features: hour, day_of_week, month, cyclical encodings")
-        print(f"   Total columns: {len(df.columns)}")
         
         return df
     
@@ -510,11 +463,8 @@ class MultiTickerDataLoader:
         all_features = list(time_varying_known) + list(time_varying_unknown)
         
         # Note: Don't filter here - pivoting will create ticker-specific columns
-        print(f"📊 Config features: {len(all_features)} total ({len(time_varying_known)} known + {len(time_varying_unknown)} unknown)")
         
         # Pivot data: one row per timestamp with ticker-specific columns
-        print(f"\n⚠️  Pivoting by timestamp to prevent data leakage...")
-        print(f"   Before: {len(df):,} rows (multiple tickers per date)")
         
         # Identify ticker-specific vs shared features
         ticker_features = ['close', 'volume', 'sma_50', 'sma_200']
@@ -525,7 +475,6 @@ class MultiTickerDataLoader:
         # Get unique tickers (sorted for consistency)
         if 'ticker' in df.columns:
             tickers = sorted(df['ticker'].unique())
-            print(f"   Found {len(tickers)} tickers: {', '.join(tickers)}")
             
             # Start with timestamps
             timestamps = sorted(df['timestamp'].unique())
@@ -564,18 +513,13 @@ class MultiTickerDataLoader:
             # Save final features for metadata export
             self.final_features = all_features
             
-            print(f"   ✅ Created {len(ticker_features) * len(tickers)} ticker-specific features")
-            print(f"   Total features: {len(all_features)} = {len(ticker_features)*len(tickers)} ticker + {len(gdelt_features)} GDELT + {len(time_features)} time")
         else:
             # No ticker column, just group by timestamp (shouldn't happen)
             grouped = df.groupby('timestamp').first().reset_index()
-            print(f"   ⚠️  No ticker column found, using first value per timestamp")
         
         # Store final feature list for metadata
         self.final_features = all_features
         
-        print(f"   After: {len(grouped):,} rows (one per unique date)")
-        print(f"   ✅ Each date now appears exactly once")
         
         feature_data = grouped[all_features].values
         
@@ -583,10 +527,8 @@ class MultiTickerDataLoader:
         # Use agriculture basket if available, otherwise use ticker close price
         if 'agriculture_basket_close' in grouped.columns:
             target_prices = grouped['agriculture_basket_close'].values
-            print(f"🌾 Using agriculture basket (WEAT+SOYB+RJA avg) as target")
         else:
             target_prices = grouped['close'].values
-            print(f"📊 Using ticker close price as target")
         
         timestamps = grouped['timestamp'].values
         
@@ -627,9 +569,7 @@ class MultiTickerDataLoader:
             'test': (X[val_end:], y[val_end:], ts[val_end:])
         }
         
-        print(f"\nData splits:")
         for split_name, (x, _, _) in splits.items():
-            print(f"  {split_name:5s}: {len(x):,} samples ({x.shape[0]/n_samples*100:.1f}%)")
         
         return splits
     
@@ -644,7 +584,6 @@ class MultiTickerDataLoader:
         
         # Clear existing data
         if output_dir.exists():
-            print(f"\n🗑️  Clearing existing processed data...")
             shutil.rmtree(output_dir)
         
         output_dir.mkdir(parents=True, exist_ok=True)
@@ -660,40 +599,23 @@ class MultiTickerDataLoader:
             time_varying_unknown = self.config['model']['time_varying_unknown']
             all_features = list(time_varying_known) + list(time_varying_unknown)
         
-        print(f"\n" + "="*80)
-        print(f"   Saving Processed Data (NumPy Arrays)")
-        print("="*80)
-        print(f"\n💾 Output directory: {output_dir}/")
-        print(f"   Features: {len(all_features)} total")
-        print(f"     - {len(time_varying_known)} time-varying known (future known)")
-        print(f"     - {len(time_varying_unknown)} time-varying unknown (past only)")
-        print(f"   Prediction horizons: {self.horizons}")
-        print(f"   Format: NumPy arrays (.npy) - optimized for PyTorch/TensorFlow")
-        print()
         
         # Save each split as separate X, y, ts arrays
         for split_name, (X, y, ts) in splits.items():
             n_samples, lookback, n_features = X.shape
             n_horizons = y.shape[1] if len(y.shape) > 1 else 1
             
-            print(f"  💾 Saving {split_name.upper()} split ({n_samples:,} sequences)...")
             
             # Save arrays (memory efficient - no copies)
             X_file = output_dir / f'X_{split_name}.npy'
             y_file = output_dir / f'y_{split_name}.npy'
             ts_file = output_dir / f'ts_{split_name}.npy'
             
-            print(f"     Saving X_{split_name}.npy {X.shape}...", end='', flush=True)
             np.save(X_file, X)
-            print(f" Done!")
             
-            print(f"     Saving y_{split_name}.npy {y.shape}...", end='', flush=True)
             np.save(y_file, y)
-            print(f" Done!")
             
-            print(f"     Saving ts_{split_name}.npy {ts.shape}...", end='', flush=True)
             np.save(ts_file, ts)
-            print(f" Done!")
             
             # Calculate file sizes
             X_size_mb = X_file.stat().st_size / 1024 / 1024
@@ -701,13 +623,6 @@ class MultiTickerDataLoader:
             ts_size_mb = ts_file.stat().st_size / 1024 / 1024
             total_split_mb = X_size_mb + y_size_mb + ts_size_mb
             
-            print(f"  ✅ {split_name.upper():5s}:")
-            print(f"       Sequences: {n_samples:,}")
-            print(f"       X_{split_name}.npy: {X.shape} = {X_size_mb:.2f} MB")
-            print(f"       y_{split_name}.npy: {y.shape} = {y_size_mb:.2f} MB")
-            print(f"       ts_{split_name}.npy: {ts.shape} = {ts_size_mb:.2f} MB")
-            print(f"       Total: {total_split_mb:.2f} MB")
-            print()
         
         # Save scalers for inverse transform
         scalers_file = output_dir / 'scalers.pkl'
@@ -715,10 +630,6 @@ class MultiTickerDataLoader:
             pickle.dump(self.scalers, f)
         
         scalers_size_kb = scalers_file.stat().st_size / 1024
-        print(f"  💾 SCALERS: {scalers_file.name}")
-        print(f"       File size: {scalers_size_kb:.2f} KB")
-        print(f"       Contains: {len(self.scalers)} feature scalers + target scaler")
-        print()
         
         # Save metadata
         metadata = {
@@ -751,10 +662,6 @@ class MultiTickerDataLoader:
         
         metadata_size_kb = metadata_file.stat().st_size / 1024
         
-        print(f"  📋 METADATA: {metadata_file.name}")
-        print(f"       File size: {metadata_size_kb:.2f} KB")
-        print(f"       Contains: config, shapes, feature lists, sample counts")
-        print()
         
         # Save feature names
         feature_file = output_dir / 'feature_names.txt'
@@ -773,25 +680,13 @@ class MultiTickerDataLoader:
         
         feature_file_size_kb = feature_file.stat().st_size / 1024
         
-        print(f"  📄 FEATURES: {feature_file.name}")
-        print(f"       File size: {feature_file_size_kb:.2f} KB")
-        print(f"       Contains: {len(time_varying_known)} known + {len(time_varying_unknown)} unknown features")
-        print()
         
         # Calculate total directory size
         total_size_mb = sum(f.stat().st_size for f in output_dir.glob('*')) / 1024 / 1024
         
-        print(f"" + "="*80)
-        print(f"✅ All processed data saved successfully!")
-        print(f"   Location: {output_dir}/")
-        print(f"   Total size: {total_size_mb:.2f} MB")
-        print(f"   Files: X_*.npy, y_*.npy, ts_*.npy (3 splits), scalers.pkl, metadata.yaml")
-        print(f"\n💡 Load with: X = np.load('data/processed/X_train.npy')")
-        print("="*80)
     
     def _export_raw_validation(self, df: pd.DataFrame):
         """Export raw validation data to data/raw (always called)."""
-        print(f"\n💾 Exporting validation data (raw, non-normalized)...")
         
         raw_dir = Path('data/raw')
         raw_dir.mkdir(parents=True, exist_ok=True)
@@ -808,12 +703,10 @@ class MultiTickerDataLoader:
         # Use agriculture basket if available, otherwise use first ticker close
         if 'agriculture_basket_close' in df_raw.columns:
             target_price_col = 'agriculture_basket_close'
-            print(f"  🌾 Computing targets from agriculture basket")
         else:
             # Find first ticker close column
             close_cols = [c for c in df_raw.columns if c.startswith('close_')]
             target_price_col = close_cols[0] if close_cols else 'close'
-            print(f"  📊 Computing targets from {target_price_col}")
         
         # Formula: (price[t+k] - price[t]) / price[t]
         for horizon in self.horizons:
@@ -839,28 +732,17 @@ class MultiTickerDataLoader:
         df_raw.to_csv(csv_file, index=False, float_format='%.8f')  # 8 decimals for small indicator values
         df_raw.to_parquet(parquet_file, index=False)
         
-        print(f"  ✅ CSV:     {csv_file}")
-        print(f"  ✅ Parquet: {parquet_file}")
-        print(f"     Format: Raw prices (not normalized)")
-        print(f"     Columns: timestamp, OHLCV, indicators, targets")
-        print(f"     Targets: {', '.join(target_cols)}")
-        print(f"     Period: {df_raw['timestamp'].iloc[0]} to {df_raw['timestamp'].iloc[-1]}")
-        print(f"     Rows: {len(df_raw):,}")
-        print(f"\n  📋 Sample (first row):")
-        print(f"     Time: {df_raw['timestamp'].iloc[0]}")
         
         # After pivoting, close columns are ticker-specific (e.g., close_SPY, close_QQQ)
         close_cols = [col for col in df_raw.columns if col.startswith('close_')]
         if close_cols:
             # Show first ticker's close price as example
             first_close_col = close_cols[0]
-            print(f"     {first_close_col}: ${df_raw[first_close_col].iloc[0]:.2f}")
         
         if len(target_cols) > 0:
             for tc in target_cols:
                 val = df_raw[tc].iloc[0]
                 if pd.notna(val):
-                    print(f"     {tc}: ${val:.2f}")
     
     def _export_normalized_data(self, df: pd.DataFrame, X: np.ndarray, y: np.ndarray, 
                                 ts: np.ndarray, base_name: str):
@@ -870,9 +752,6 @@ class MultiTickerDataLoader:
         normalized_file = f"{base_name}_normalized.parquet"
         df.to_parquet(normalized_file, index=False)
         
-        print(f"\n  ✅ Normalized data: {normalized_file}")
-        print(f"     Format: Normalized features (for model training)")
-        print(f"     Shape: {df.shape} (rows × columns)")
         
         # 2. Export sequence summary
         summary_file = f"{base_name}_sequences_summary.csv"
@@ -891,10 +770,6 @@ class MultiTickerDataLoader:
         summary_df = pd.DataFrame(summary_data)
         summary_df.to_csv(summary_file, index=False)
         
-        print(f"  ✅ Sequences summary: {summary_file}")
-        print(f"     Total sequences: {len(X):,}")
-        print(f"     Input shape: {X[0].shape} (lookback × features)")
-        print(f"     Target shape: {y[0].shape} (horizons)")
     
     def prepare_data(self) -> Dict[str, Tuple[np.ndarray, np.ndarray, np.ndarray]]:
         """Full data preparation pipeline."""
@@ -905,22 +780,9 @@ class MultiTickerDataLoader:
         df = self.add_time_features(df)
         
         # Create sequences from RAW data (pivoting happens inside)
-        print(f"\n" + "="*80)
-        print(f"   Creating Time-Series Sequences")
-        print("="*80)
-        print(f"\n  Lookback window: {self.lookback} periods")
-        print(f"  Prediction horizons: {self.horizons} periods")
-        print(f"  Processing {len(df):,} timesteps...")
         X_raw, y_raw, ts, df_raw = self.create_sequences(df)
-        print(f"\n✅ Created {len(X_raw):,} sequences")
-        print(f"   Input shape: ({len(X_raw)}, {self.lookback}, {X_raw.shape[2]})")
-        print(f"   Targets shape: ({y_raw.shape[0]}, {y_raw.shape[1]})")
         
         # Split data FIRST (before normalization)
-        print(f"\n" + "="*80)
-        print(f"   Splitting Data Chronologically")
-        print("="*80)
-        print()
         n_samples = len(X_raw)
         train_ratio = self.config['data']['train_ratio']
         val_ratio = self.config['data']['val_ratio']
@@ -940,15 +802,8 @@ class MultiTickerDataLoader:
         ts_val = ts[train_end:val_end]
         ts_test = ts[val_end:]
         
-        print(f"  train: {len(X_train_raw):,} samples ({len(X_train_raw)/n_samples*100:.1f}%)")
-        print(f"  val  : {len(X_val_raw):,} samples ({len(X_val_raw)/n_samples*100:.1f}%)")
-        print(f"  test : {len(X_test_raw):,} samples ({len(X_test_raw)/n_samples*100:.1f}%)")
         
         # Normalize ONLY on training data (both features and targets)
-        print(f"\n" + "="*80)
-        print(f"   Normalizing Train/Val/Test Splits")
-        print("="*80)
-        print(f"\n⚠️  Fitting scalers on TRAIN set only (prevents data leakage)...")
         X_train_norm, X_val_norm, X_test_norm, y_train_norm, y_val_norm, y_test_norm = self._normalize_splits(
             X_train_raw, X_val_raw, X_test_raw, y_train, y_val, y_test
         )
@@ -964,7 +819,6 @@ class MultiTickerDataLoader:
         
         # Export debug data to temp (optional)
         if self.export_temp:
-            print(f"\n📁 Exporting debug data to temp/ (export_temp=True)...")
             # Note: Exporting normalized version
             df_norm = self.normalize_data(df, fit=True)
             self._export_normalized_data(df_norm, X_raw, y_raw, ts, f"temp/tft_data_{self.ticker.replace(':', '_')}_{self.frequency}_{datetime.now().strftime('%Y%m%d_%H%M%S')}")
@@ -996,11 +850,8 @@ class MultiTickerDataLoader:
                 features_to_normalize.append(i)
         
         skipped_features = [f for f in all_features if f in time_features_to_skip]
-        print(f"  Normalizing {len(features_to_normalize)}/{len(all_features)} features")
         if skipped_features:
-            print(f"  Skipping: {', '.join(skipped_features)}")
         else:
-            print(f"  Skipping: (none - all features will be normalized)")
         
         # Normalize each feature across the sequence dimension
         X_train_norm = X_train.copy()
@@ -1009,7 +860,6 @@ class MultiTickerDataLoader:
         
         import time
         n_features = len(features_to_normalize)
-        print(f"  Processing {n_features} features...\n")
         start_time = time.time()
         
         for i, feat_idx in enumerate(features_to_normalize, 1):
@@ -1045,21 +895,13 @@ class MultiTickerDataLoader:
             
             # Shorten feature name if too long (e.g., ticker-specific features)
             display_name = feat_name if len(feat_name) <= 30 else feat_name[:27] + '...'
-            print(f"    [{i:2d}/{n_features}] {display_name:<30} mean={scaler.mean_[0]:>12.4f} std={scaler.scale_[0]:>12.4f} ({pct:5.1f}%, ETA: {eta:3.0f}s)")
         
         total_time = time.time() - start_time
-        print(f"\n  ✅ Normalized {n_features} features in {total_time:.1f}s ({total_time/n_features:.2f}s per feature)")
         
         # Normalize targets (y) - FIT on actual multi-horizon target distribution
         # NOTE: Do NOT use the 1-period 'returns' scaler! Multi-horizon returns have different variance.
-        print(f"\n  Normalizing targets (y) - fitting scaler on multi-horizon returns...")
         
         # Show raw statistics BEFORE normalization (diagnostic)
-        print(f"\n  📊 RAW TARGET STATS (before normalization):")
-        print(f"     y_train mean: {y_train.mean():.6f}, std: {y_train.std():.6f}")
-        print(f"     y_train range: [{y_train.min():.6f}, {y_train.max():.6f}]")
-        print(f"     y_val mean: {y_val.mean():.6f}, std: {y_val.std():.6f}")
-        print(f"     y_val range: [{y_val.min():.6f}, {y_val.max():.6f}]")
         
         # Always fit a NEW scaler specifically for targets
         # (Multi-horizon returns have different statistics than 1-period returns)
@@ -1068,8 +910,6 @@ class MultiTickerDataLoader:
         target_scaler.fit(y_train.reshape(-1, 1))
         self.scalers['target'] = target_scaler  # Store under 'target' key, not self.target_col
         
-        print(f"\n  ✅ Target scaler fitted on {y_train.size} samples")
-        print(f"     Scaler mean: {target_scaler.mean_[0]:.6f}, std: {target_scaler.scale_[0]:.6f}")
         
         # Transform targets for all splits (flatten, transform, reshape)
         # y shape: (n_samples, n_horizons) -> flatten -> transform -> reshape back
@@ -1077,14 +917,8 @@ class MultiTickerDataLoader:
         y_val_norm = target_scaler.transform(y_val.flatten().reshape(-1, 1)).reshape(y_val.shape)
         y_test_norm = target_scaler.transform(y_test.flatten().reshape(-1, 1)).reshape(y_test.shape)
         
-        print(f"\n  📊 NORMALIZED TARGET STATS (after normalization):")
-        print(f"     y_train_norm mean: {y_train_norm.mean():.6f}, std: {y_train_norm.std():.6f}")
-        print(f"     y_train_norm range: [{y_train_norm.min():.3f}, {y_train_norm.max():.3f}]")
-        print(f"     y_val_norm mean: {y_val_norm.mean():.6f}, std: {y_val_norm.std():.6f}")
-        print(f"     y_val_norm range: [{y_val_norm.min():.3f}, {y_val_norm.max():.3f}]")
         
         # CRITICAL: Check for NaN/Inf after normalization
-        print(f"\n  🔍 DATA QUALITY CHECKS:")
         
         try:
             # Ensure numeric dtype
@@ -1099,8 +933,6 @@ class MultiTickerDataLoader:
             val_nan = np.isnan(X_val_arr).sum()
             val_inf = np.isinf(X_val_arr).sum()
             
-            print(f"     X_train: NaN={train_nan:,}, Inf={train_inf:,}")
-            print(f"     X_val:   NaN={val_nan:,}, Inf={val_inf:,}")
             
             # Check y (targets)
             y_train_nan = np.isnan(y_train_arr).sum()
@@ -1108,12 +940,9 @@ class MultiTickerDataLoader:
             y_val_nan = np.isnan(y_val_arr).sum()
             y_val_inf = np.isinf(y_val_arr).sum()
             
-            print(f"     y_train: NaN={y_train_nan:,}, Inf={y_train_inf:,}")
-            print(f"     y_val:   NaN={y_val_nan:,}, Inf={y_val_inf:,}")
             
             # If any NaN/Inf found, identify which features
             if train_nan > 0 or train_inf > 0:
-                print(f"\n  ⚠️  WARNING: Found NaN/Inf in training data!")
             nan_features = []
             inf_features = []
             for i, feat_name in enumerate(all_features):
@@ -1126,30 +955,21 @@ class MultiTickerDataLoader:
                     inf_features.append(f"{feat_name} ({inf_count:,} Inf)")
             
             if nan_features:
-                print(f"\n  🔴 Features with NaN:")
                 for feat in nan_features[:10]:  # Show first 10
-                    print(f"     - {feat}")
                 if len(nan_features) > 10:
-                    print(f"     ... and {len(nan_features) - 10} more")
             
             if inf_features:
-                print(f"\n  🔴 Features with Inf:")
                 for feat in inf_features[:10]:  # Show first 10
-                    print(f"     - {feat}")
                 if len(inf_features) > 10:
-                    print(f"     ... and {len(inf_features) - 10} more")
             
                 raise ValueError(
                     f"Data contains NaN ({train_nan:,}) or Inf ({train_inf:,}) after normalization. "
                     "This will cause model training to fail. Check the features listed above."
                 )
             
-            print(f"     ✅ No NaN/Inf detected!")
             
         except (TypeError, ValueError) as e:
             if 'isnan' in str(e) or 'dtype' in str(e):
-                print(f"     ⚠️  Could not validate data types (arrays may have mixed types)")
-                print(f"     Skipping NaN/Inf check - model will fail at runtime if data is bad")
             else:
                 raise
         
@@ -1205,7 +1025,6 @@ def create_data_loaders(config_path: str = 'configs/model_tft_config.yaml',
     
     if use_cached:
         # Load pre-processed data from numpy arrays
-        print("\n📂 Loading pre-processed data from disk (skipping BigQuery)...")
         splits = {}
         for split_name in ['train', 'val', 'test']:
             # Use new naming convention: X_train.npy
@@ -1218,7 +1037,6 @@ def create_data_loaders(config_path: str = 'configs/model_tft_config.yaml',
             y = y.astype(np.float32)
             
             splits[split_name] = (X, y, ts)
-            print(f"  ✅ {split_name}: X{X.shape}, y{y.shape}, ts{ts.shape}")
         
         # Load scalers
         scalers_file = processed_dir / 'scalers.pkl'
@@ -1226,13 +1044,10 @@ def create_data_loaders(config_path: str = 'configs/model_tft_config.yaml',
             import pickle
             with open(scalers_file, 'rb') as f:
                 scalers = pickle.load(f)
-            print(f"  ✅ Loaded scalers from {scalers_file}")
         else:
-            print(f"  ⚠️  No scalers file found, will use default normalization")
             scalers = None
     else:
         # Prepare data from BigQuery (original behavior)
-        print("\n📂 No pre-processed data found, fetching from BigQuery...")
         loader = MultiTickerDataLoader(config_path, export_temp=export_temp)
         splits = loader.prepare_data()
 
@@ -1243,7 +1058,6 @@ def create_data_loaders(config_path: str = 'configs/model_tft_config.yaml',
 
         # Note: Arrays already saved by prepare_data() with new naming convention
         # No need to save again
-        print(f"\n✅ Using arrays from {processed_dir}/ (already saved by prepare_data)")
 
         # Load scalers (already saved by prepare_data)
         scalers_file = processed_dir / 'scalers.pkl'
@@ -1251,7 +1065,6 @@ def create_data_loaders(config_path: str = 'configs/model_tft_config.yaml',
             import pickle
             with open(scalers_file, 'rb') as f:
                 scalers = pickle.load(f)
-            print(f"  ✅ Loaded scalers from {scalers_file}")
         else:
             scalers = loader.scalers if hasattr(loader, 'scalers') else None
     
@@ -1319,12 +1132,9 @@ if __name__ == '__main__':
     args = parser.parse_args()
     
     # Test data loading
-    print("="*80)
-    print("   TFT Data Loader Test")
-    print("="*80)
     
     if args.force_refresh:
-        print("\n🔄 Force refresh enabled - will fetch from BigQuery...")
+        pass
     
     loaders, scalers = create_data_loaders(
         config_path=args.config,
@@ -1332,28 +1142,9 @@ if __name__ == '__main__':
         force_refresh=args.force_refresh
     )
     
-    print(f"\n✅ Data loaders created successfully")
-    print(f"\nScalers: {list(scalers.keys())}")
     
     # Test batch
     for batch_X, batch_y in loaders['train']:
-        print(f"\nSample batch:")
-        print(f"  Input shape:  {batch_X.shape}  # [batch, lookback, features]")
-        print(f"  Target shape: {batch_y.shape}  # [batch, horizons]")
         break
     
-    print(f"\n💡 Command-line options:")
-    print(f"   --force-refresh    Force reload from BigQuery (ignore cache)")
-    print(f"   --export-temp      Export debug data to temp/ directory")
-    print(f"\n   Example: python scripts/02_features/tft_data_loader.py --force-refresh")
     
-    print(f"\n📂 Files created:")
-    print(f"\n   data/raw/ (validation data - raw prices):")
-    print(f"     - tft_features.csv")
-    print(f"     - tft_features.parquet")
-    print(f"\n   data/processed/ (training data - normalized):")
-    print(f"     - X_train.npy, y_train.npy, ts_train.npy")
-    print(f"     - X_val.npy, y_val.npy, ts_val.npy")
-    print(f"     - X_test.npy, y_test.npy, ts_test.npy")
-    print(f"     - scalers.pkl, metadata.yaml, feature_names.txt")
-    print(f"     - feature_names.txt")

@@ -98,21 +98,10 @@ def submit_training_job(
     for key, value in hyperparameters.items():
         args.append(f'--{key}={value}')
     
-    print(f"\n{'='*80}")
-    print(f"   Submitting Vertex AI Training Job")
-    print(f"{'='*80}")
-    print(f"Job Name: {job_name}")
-    print(f"Model Type: {model_type}")
-    print(f"Machine: {machine_type}")
-    print(f"Image: {IMAGE_URI}")
     if dataset_version:
         full_dataset_version = f"{model_type}/{dataset_version}"
-        print(f"Dataset Version: {full_dataset_version} (pre-generated)")
     else:
-        print(f"Dataset: Will generate from BigQuery")
-    print(f"Args: {args}")
-    print(f"{'='*80}\n")
-    
+        full_dataset_version = None
     # Create custom job
     machine_spec = {
         'machine_type': machine_type,
@@ -166,11 +155,8 @@ def submit_training_job(
                 labels['end_date'] = end_date.replace('/', '-')
     except Exception as e:
         # Non-critical, continue without date labels
-        print(f"   ⚠️  Could not extract date range: {e}")
     
-    print(f"\n🏷️  Adding labels for identification:")
     for key, value in labels.items():
-        print(f"   {key}: {value}")
     
     job = aiplatform.CustomJob(
         display_name=job_name,
@@ -181,34 +167,23 @@ def submit_training_job(
     # Get or create TensorBoard instance
     tensorboard_resource_name = None
     try:
-        print(f"\n📊 Setting up TensorBoard...")
         tensorboards = aiplatform.Tensorboard.list(filter=f'display_name="tensorboard-{PROJECT_ID}"')
         
         if tensorboards:
             tensorboard = tensorboards[0]
             tensorboard_resource_name = tensorboard.resource_name
-            print(f"   ✅ Using existing TensorBoard: {tensorboard.display_name}")
-            print(f"   Resource: {tensorboard_resource_name}")
         else:
-            print(f"   Creating new TensorBoard instance...")
             tensorboard = aiplatform.Tensorboard.create(
                 display_name=f"tensorboard-{PROJECT_ID}",
                 project=PROJECT_ID,
                 location=REGION,
             )
             tensorboard_resource_name = tensorboard.resource_name
-            print(f"   ✅ Created: {tensorboard.display_name}")
-            print(f"   Resource: {tensorboard_resource_name}")
     except Exception as e:
-        print(f"\n⚠️  TensorBoard setup failed: {e}")
-        print(f"   Training will continue without TensorBoard")
         tensorboard_resource_name = None
     
     # Submit job
-    print(f"\n🚀 Submitting job to Vertex AI...")
     if use_spot:
-        print(f"   ⚠️  Warning: Spot instances requested but not supported via Python SDK")
-        print(f"   Using regular instances (spot requires gcloud CLI or REST API)")
     
     # Prepare job run parameters
     run_params = {'sync': False}
@@ -227,10 +202,7 @@ def submit_training_job(
         
         run_params['tensorboard'] = tensorboard_resource_name
         run_params['service_account'] = service_account
-        print(f"   📊 TensorBoard integration: ENABLED")
-        print(f"   Service account: {service_account}")
     else:
-        print(f"   📊 TensorBoard integration: DISABLED")
     
     job.run(**run_params)
     
@@ -238,21 +210,14 @@ def submit_training_job(
     import time
     time.sleep(2)
     
-    print(f"\n✅ Job submitted successfully!")
     
     # Job properties may not be available immediately after async submission
     try:
-        print(f"   Job Name: {job.display_name}")
     except (RuntimeError, AttributeError):
-        print(f"   Job Name: {job_name}")
     
     try:
-        print(f"   Resource: {job.resource_name}")
     except (RuntimeError, AttributeError):
-        print(f"   Resource: (being created...)")
     
-    print(f"\n📊 Monitor at:")
-    print(f"https://console.cloud.google.com/vertex-ai/training/custom-jobs?project={PROJECT_ID}")
     
     return job
 
@@ -307,11 +272,8 @@ if __name__ == '__main__':
     if args.job:
         # Named job from vertex.yaml
         if args.job not in VERTEX_CONFIG['jobs']:
-            print(f"\n❌ Unknown job: {args.job}")
-            print(f"\nAvailable jobs:")
             for job_name, job_def in VERTEX_CONFIG['jobs'].items():
                 profile = VERTEX_CONFIG['profiles'][job_def['profile']]
-                print(f"  • {job_name:20} ({profile['use_case']})")
             exit(1)
         
         # Load named job config
@@ -327,9 +289,6 @@ if __name__ == '__main__':
             'accelerator_count': profile['accelerator_count'],
         })
         
-        print(f"\n📋 Using named job: {args.job}")
-        print(f"   Profile: {profile_name} (${profile['cost_per_hour']}/hr)")
-        print(f"   Use case: {profile['use_case']}")
     else:
         # Manual configuration with defaults from vertex.yaml
         job_config = {
@@ -341,10 +300,7 @@ if __name__ == '__main__':
         # Use profile if specified
         if args.profile:
             if args.profile not in VERTEX_CONFIG['profiles']:
-                print(f"\n❌ Unknown profile: {args.profile}")
-                print(f"\nAvailable profiles:")
                 for prof_name, prof_def in VERTEX_CONFIG['profiles'].items():
-                    print(f"  • {prof_name:15} ${prof_def['cost_per_hour']}/hr - {prof_def['use_case']}")
                 exit(1)
             
             profile = VERTEX_CONFIG['profiles'][args.profile]
@@ -353,7 +309,6 @@ if __name__ == '__main__':
                 'accelerator_type': profile['accelerator_type'],
                 'accelerator_count': profile['accelerator_count'],
             })
-            print(f"\n📋 Using profile: {args.profile} (${profile['cost_per_hour']}/hr)")
         else:
             # Default to CPU profile
             profile = VERTEX_CONFIG['profiles']['cpu']
@@ -362,7 +317,6 @@ if __name__ == '__main__':
                 'accelerator_type': profile['accelerator_type'],
                 'accelerator_count': profile['accelerator_count'],
             })
-            print(f"\n📋 Using default profile: cpu")
     
     # Override with CLI arguments (highest priority)
     if args.dataset_version:
@@ -392,28 +346,14 @@ if __name__ == '__main__':
     
     # Monitor job if --wait flag is set
     if args.wait:
-        print(f"\n🔍 Monitoring job status...")
-        print(f"   (Press Ctrl+C to stop monitoring, job will continue running)\n")
         try:
             job.wait()
-            print(f"\n✅ Job completed successfully!")
         except KeyboardInterrupt:
-            print(f"\n\n⏸️  Stopped monitoring (job still running in background)")
     else:
-        print(f"\n🚀 Job submitted in background")
-        print(f"   Use --wait flag to monitor status, or check console")
     
     # Print final status (handle case where job resource isn't available yet)
     try:
-        print(f"\n📊 Job: {job.display_name}")
     except (RuntimeError, AttributeError) as e:
         # Check if it's a quota error
         if "quota" in str(e).lower():
-            print(f"\n❌ Job creation failed: GPU quota exceeded")
-            print(f"   Error: {str(e)}")
-            print(f"\n💡 Solutions:")
-            print(f"   1. Use CPU-only training (see commented code above)")
-            print(f"   2. Request GPU quota increase: https://console.cloud.google.com/iam-admin/quotas")
-            print(f"   3. Check for running jobs consuming quota")
         else:
-            print(f"\n🚀 Job submitted (resource being created...)")

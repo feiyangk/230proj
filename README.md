@@ -77,7 +77,6 @@ inflation_predictor/
 │
 ├── utils/
 │   ├── config_loader.py         # YAML config utilities
-│   ├── logger.py                # Logging setup
 │   └── visualization.py         # Plotting utilities
 │
 ├── logs/                        # Training logs and metrics
@@ -145,7 +144,7 @@ cp .env.example .env
 
 ```bash
 # Test imports
-python -c "import torch; import pandas; import google.cloud.bigquery; print('✅ All dependencies installed')"
+python -c "import torch; import pandas; import google.cloud.bigquery"
 ```
 
 ---
@@ -313,6 +312,30 @@ tensorboard --logdir logs/tensorboard/tft  # TFT model only
 tensorboard --logdir logs/tensorboard/decoder_transformer  # Decoder only
 ```
 
+
+### **Step 3: Hyperparam selection**
+```bash
+
+nohup python scripts/training/pan_nan_fusion/dim_search.py \
+  --config configs/model_pan_nan_fusion.yaml \
+  --method grid \
+  --d-model 64 96 128 \
+  --sentiment-hidden 32 64 128 \
+  --fusion-hidden 64 128 256 \
+  --tie-d-ff \
+  --epochs 30 \
+  --no-fincast \
+  --horizons 7,14,28 \
+  > dim_search_no_fincast.log 2>&1 &
+
+
+# Watch the log
+tail -f dim_search_no_fincast.log
+
+# Check if it's still running
+ps aux | grep dim_search
+
+  ```
 ### **What You'll See:**
 
 ```

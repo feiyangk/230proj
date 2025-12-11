@@ -19,7 +19,6 @@ def load_results(json_file):
 def create_dim_search_table(results, output_file=None):
     """Create a table for dimension search results."""
     if not results:
-        print("No results to display")
         return
     
     # Extract data
@@ -48,22 +47,16 @@ def create_dim_search_table(results, output_file=None):
         table += '|' + '|'.join([f' {str(cell):<{col_widths[i]}} ' for i, cell in enumerate(row)]) + '|\n'
     table += separator
     
-    print("\n" + "="*80)
-    print("Dimension Search Results")
-    print("="*80)
-    print(table)
     
     if output_file:
         with open(output_file, 'w') as f:
             f.write(table)
-        print(f"\nTable saved to: {output_file}")
     
     # Summary statistics
     total = len(results)
     successful = sum(1 for r in results if r.get('success', False))
     failed = total - successful
     
-    print(f"\nSummary: {successful}/{total} successful, {failed}/{total} failed")
     
     return table
 
@@ -71,7 +64,6 @@ def create_dim_search_table(results, output_file=None):
 def create_reg_search_table(results, output_file=None):
     """Create a table for regularization search results."""
     if not results:
-        print("No results to display")
         return
     
     # Extract data
@@ -100,22 +92,16 @@ def create_reg_search_table(results, output_file=None):
         table += '|' + '|'.join([f' {str(cell):<{col_widths[i]}} ' for i, cell in enumerate(row)]) + '|\n'
     table += separator
     
-    print("\n" + "="*80)
-    print("Regularization Search Results")
-    print("="*80)
-    print(table)
     
     if output_file:
         with open(output_file, 'w') as f:
             f.write(table)
-        print(f"\nTable saved to: {output_file}")
     
     # Summary statistics
     total = len(results)
     successful = sum(1 for r in results if r.get('success', False))
     failed = total - successful
     
-    print(f"\nSummary: {successful}/{total} successful, {failed}/{total} failed")
     
     return table
 
@@ -191,7 +177,6 @@ def main():
         elif results and 'model_dropout' in results[0]:
             args.type = 'reg'
         else:
-            print("Could not auto-detect search type. Please specify --type")
             return
     
     # Create table
@@ -205,7 +190,6 @@ def main():
         latex_table = create_latex_table(results, args.type)
         with open(args.latex, 'w') as f:
             f.write(latex_table)
-        print(f"\nLaTeX table saved to: {args.latex}")
 
 
 if __name__ == '__main__':

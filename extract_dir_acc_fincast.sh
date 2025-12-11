@@ -23,12 +23,10 @@ from pathlib import Path
 try:
     from tensorboard.backend.event_processing.event_accumulator import EventAccumulator
 except ImportError:
-    print("Error: TensorBoard not available. Install with: pip install tensorboard")
     sys.exit(1)
 
 log_path = Path("$log_dir")
 if not log_path.exists():
-    print(f"Log directory not found: $log_dir")
     sys.exit(1)
 
 try:
@@ -44,18 +42,10 @@ try:
             final_dir_acc = dir_acc_events[-1].value
             best_epoch = max(e.step for e in dir_acc_events if e.value == best_dir_acc)
             
-            print(f"✅ Found directional accuracy metrics:")
-            print(f"   Best directional accuracy: {best_dir_acc * 100:.2f}% (epoch {best_epoch})")
-            print(f"   Final directional accuracy: {final_dir_acc * 100:.2f}%")
-            print(f"   Total epochs: {len(dir_acc_events)}")
         else:
-            print("⚠️  No directional accuracy events found")
     else:
-        print("⚠️  'Metrics/DirectionalAccuracy' tag not found")
-        print(f"   Available tags: {scalar_tags[:10]}...")
         
 except Exception as e:
-    print(f"❌ Error reading TensorBoard log: {e}")
     import traceback
     traceback.print_exc()
 EOF
@@ -66,4 +56,6 @@ done
 echo ""
 echo "To extract metrics from a specific log directory, run:"
 echo "  python3 scripts/training/pan_nan_fusion/extract_table_metrics.py --log-dir <path_to_log_dir>"
+
+
 

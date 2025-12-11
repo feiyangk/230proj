@@ -68,10 +68,6 @@ def inspect_results(results_file):
     with open(results_file, 'r') as f:
         results = json.load(f)
     
-    print("="*80)
-    print("Learning Rate Search Results")
-    print("="*80)
-    print(f"Total trials: {len(results)}\n")
     
     # Try to extract validation losses from logs
     enriched_results = []
@@ -108,10 +104,6 @@ def inspect_results(results_file):
     
     # Display results
     if valid_results:
-        print("📊 Results (sorted by validation loss, best first):")
-        print("-" * 80)
-        print(f"{'LR':<12} {'Val Loss':<12} {'Epoch':<8} {'Status':<10} {'Run Name'}")
-        print("-" * 80)
         
         for i, result in enumerate(valid_results):
             lr = result['learning_rate']
@@ -121,51 +113,29 @@ def inspect_results(results_file):
             run_name = result.get('run_name', 'N/A')
             
             marker = "🏆" if i == 0 else "  "
-            print(f"{marker} {lr:<11.2e} {val_loss:<12.6f} {str(epoch):<8} {status:<10} {run_name}")
         
-        print("\n" + "="*80)
-        print("Best Learning Rate:")
-        print(f"  LR: {valid_results[0]['learning_rate']:.2e}")
-        print(f"  Validation Loss: {valid_results[0]['val_loss']:.6f}")
-        print(f"  Run Name: {valid_results[0].get('run_name', 'N/A')}")
-        print("="*80)
     
     if invalid_results:
-        print(f"\n⚠️  {len(invalid_results)} trial(s) with missing/invalid results:")
         for result in invalid_results:
             lr = result['learning_rate']
             error = result.get('val_loss_error', 'Unknown error')
-            print(f"  LR {lr:.2e}: {error}")
     
     # Summary statistics
     if valid_results:
         losses = [r['val_loss'] for r in valid_results]
-        print(f"\n📈 Summary:")
-        print(f"  Best LR: {valid_results[0]['learning_rate']:.2e} (val_loss: {min(losses):.6f})")
-        print(f"  Worst LR: {valid_results[-1]['learning_rate']:.2e} (val_loss: {max(losses):.6f})")
-        print(f"  Range: {max(losses) - min(losses):.6f}")
         
         # Find LR with best loss
         best_lr = valid_results[0]['learning_rate']
-        print(f"\n💡 Recommendation: Use LR = {best_lr:.2e}")
-        print(f"   Consider fine-tuning around this value (±2x range)")
     
     # Check TensorBoard logs
-    print(f"\n📊 To visualize in TensorBoard:")
-    print(f"   tensorboard --logdir logs/tensorboard --port 6006")
-    print(f"   Look for runs starting with 'lr_search_'")
 
 def main():
     if len(sys.argv) < 2:
-        print("Usage: python inspect_lr_results.py <results_json_file>")
-        print("\nExample:")
-        print("  python scripts/training/pan_nan_fusion/inspect_lr_results.py lr_search_results_20251202_030427.json")
         sys.exit(1)
     
     results_file = sys.argv[1]
     
     if not Path(results_file).exists():
-        print(f"❌ Results file not found: {results_file}")
         sys.exit(1)
     
     inspect_results(results_file)

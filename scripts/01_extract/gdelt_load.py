@@ -160,7 +160,6 @@ def resample_to_frequency(
     if target_frequency == '15m':
         return df  # Already at native frequency
     
-    print(f"\n📊 Resampling from 15m to {target_frequency}...")
     
     # Set timestamp as index for resampling
     df_resampled = df.set_index('timestamp')
@@ -187,9 +186,6 @@ def resample_to_frequency(
     # Remove rows with no data
     df_resampled = df_resampled[df_resampled['num_articles'] > 0]
     
-    print(f"   Original intervals: {len(df):,}")
-    print(f"   Resampled intervals: {len(df_resampled):,}")
-    print(f"   Aggregation method: {method}")
     
     return df_resampled
 
@@ -251,29 +247,15 @@ def save_query_metadata(
         errors = client.insert_rows_json(metadata_table, [row])
         
         if errors:
-            print(f"\n⚠️  Error saving metadata: {errors}")
+            raise RuntimeError(f"Failed to insert metadata rows: {errors}")
         else:
-            print(f"\n📋 Query Metadata Saved:")
-            print(f"   Query ID: {query_id}")
-            print(f"   Topic Group: {topic_group_id}")
-            print(f"   Topics: {', '.join(topics[:5])}{'...' if len(topics) > 5 else ''}")
-            print(f"   Date range: {start_date} to {end_date}")
-            print(f"   Records: {num_records:,}")
-            print(f"   Articles: {num_articles:,}")
-        
-        return query_id
+            return query_id
     except Exception as e:
-        print(f"\n⚠️  Could not save metadata (table may not exist): {e}")
-        print(f"   Run: python scripts/01_extract/setup_bigquery_tables.py")
-        return query_id
+        raise
 
 
 def clear_topic_group_frequency_data(client: bigquery.Client, table_id: str, topic_group_id: str, frequency: str, project_id: str, dataset_id: str) -> None:
     """Delete all data for a specific topic group and frequency."""
-    print(f"\n🗑️  Clearing existing data...")
-    print(f"   Table: {table_id}")
-    print(f"   Topic Group: {topic_group_id}")
-    print(f"   Frequency: {frequency}")
     
     # Delete from main sentiment table
     delete_query = f"""
@@ -285,9 +267,7 @@ def clear_topic_group_frequency_data(client: bigquery.Client, table_id: str, top
     try:
         job = client.query(delete_query)
         job.result()
-        print(f"   ✅ Cleared sentiment data for {topic_group_id} at {frequency} frequency")
     except Exception as e:
-        print(f"   ⚠️  Clear sentiment data failed (table may not exist): {e}")
     
     # Also delete metadata entries for this topic group and frequency
     metadata_table_id = f"{project_id}.{dataset_id}.gdelt_query_metadata"
@@ -300,9 +280,7 @@ def clear_topic_group_frequency_data(client: bigquery.Client, table_id: str, top
     try:
         job = client.query(delete_metadata_query)
         job.result()
-        print(f"   ✅ Cleared metadata entries for {topic_group_id} at {frequency} frequency")
     except Exception as e:
-        print(f"   ⚠️  Clear metadata failed (table may not exist): {e}")
 
 
 def fetch_gdelt_sentiment(
@@ -329,38 +307,23 @@ def fetch_gdelt_sentiment(
     if project_id is None:
         project_id = PROJECT_ID
     
-    print(f"\n{'='*80}")
-    print(f"  FETCHING GDELT SENTIMENT DATA")
-    print(f"{'='*80}")
-    print(f"Date range: {start_date} to {end_date}")
-    print(f"Topics: {', '.join(topics[:5])}{'...' if len(topics) > 5 else ''}")
-    print(f"Source: {GDELT_PROJECT}.{GDELT_DATASET}.{GDELT_TABLE}")
     
     # Build query
     query = build_gdelt_query(start_date, end_date, topics)
     
     # Execute query
-    print(f"\nExecuting BigQuery query...")
     client = bigquery.Client(project=project_id)
     
     try:
         df = client.query(query).to_dataframe()
         
         if df.empty:
-            print("\n⚠️  No sentiment data found for specified date range and topics")
             return df
         
-        print(f"\n✅ Query complete!")
-        print(f"   Intervals: {len(df)}")
-        print(f"   Date range: {df['timestamp'].min()} to {df['timestamp'].max()}")
-        print(f"   Total articles: {df['num_articles'].sum():,.0f}")
-        print(f"   Total sources: {df['num_sources'].sum():,.0f}")
-        print(f"   Avg sentiment: {df['weighted_avg_tone'].mean():.3f}")
         
         return df
         
     except Exception as e:
-        print(f"\n❌ Error querying GDELT: {e}")
         raise
 
 
@@ -400,7 +363,6 @@ def check_existing_data(
         return count > 0
     except Exception as e:
         # Table might not exist yet
-        print(f"   ⚠️  Could not check existing data: {e}")
         return False
 
 
@@ -424,14 +386,9 @@ def save_to_bigquery(
         auto_merge: If True, automatically merge staging to main
     """
     if df.empty:
-        print("\nNo data to save")
         return
     
     if dry_run:
-        print("\n🔍 DRY RUN: Would save to BigQuery")
-        print(f"   Staging: {project_id}.{dataset_id}.{STAGING_TABLE_NAME}")
-        print(f"   Main: {project_id}.{dataset_id}.{TABLE_NAME}")
-        print(f"   Rows: {len(df)}")
         return
     
     client = bigquery.Client(project=project_id)
@@ -466,10 +423,6 @@ def save_to_bigquery(
     df['topic_group_id'] = topic_group_id  # Tag with topic group
     df['ingestion_timestamp'] = pd.Timestamp.now(tz='UTC')
     
-    print(f"\n{'='*80}")
-    print(f"  SAVING TO BIGQUERY")
-    print(f"{'='*80}")
-    print(f"Staging: {staging_table_id}")
     
     # Load to staging table (overwrite)
     job_config = bigquery.LoadJobConfig(
@@ -480,14 +433,11 @@ def save_to_bigquery(
     job = client.load_table_from_dataframe(df, staging_table_id, job_config=job_config)
     job.result()  # Wait for completion
     
-    print(f"✓ Loaded {len(df)} rows to staging")
     
     # Create main table if it doesn't exist
     try:
         client.get_table(main_table_id)
-        print(f"Main table exists: {main_table_id}")
     except:
-        print(f"Creating main table: {main_table_id}")
         table = bigquery.Table(main_table_id, schema=schema)
         table.time_partitioning = bigquery.TimePartitioning(
             type_=bigquery.TimePartitioningType.DAY,
@@ -549,20 +499,13 @@ def save_to_bigquery(
         )
     """
     
-    print(f"Merging staging → main table...")
     merge_job = client.query(merge_query)
     merge_job.result()
     
     if auto_merge:
-        print(f"Merging staging → main table...")
         merge_job = client.query(merge_query)
         merge_job.result()
-        print(f"✓ MERGE complete")
-        print(f"\n✅ Data saved to {main_table_id}")
     else:
-        print(f"\n⚠️  Skipped auto-merge (--no-merge flag)")
-        print(f"   Data in staging: {staging_table_id}")
-        print(f"   Run MERGE manually to update main table")
 
 
 def load_config(config_path: str) -> dict:
@@ -578,9 +521,6 @@ def flush_existing_data(
     end_date: str
 ) -> None:
     """Delete existing data for date range."""
-    print(f"\n🗑️  FLUSHING existing data...")
-    print(f"   Table: {table_id}")
-    print(f"   Range: {start_date} to {end_date}")
     
     delete_query = f"""
     DELETE FROM `{table_id}`
@@ -591,26 +531,19 @@ def flush_existing_data(
     try:
         job = client.query(delete_query)
         job.result()
-        print(f"   ✓ Flushed existing data")
     except Exception as e:
-        print(f"   ⚠️  Flush failed (table may not exist): {e}")
 
 
 def purge_all_data(client: bigquery.Client, table_id: str) -> None:
     """Delete ALL data from table."""
-    print(f"\n❌ PURGING all data...")
-    print(f"   Table: {table_id}")
     
     response = input("   ⚠️  Delete ALL sentiment data? [y/N]: ")
     if response.lower() != 'y':
-        print("   Cancelled")
         return
     
     try:
         client.query(f"TRUNCATE TABLE `{table_id}`").result()
-        print(f"   ✓ Purged all data")
     except Exception as e:
-        print(f"   ⚠️  Purge failed: {e}")
 
 
 def get_latest_timestamp(client: bigquery.Client, table_id: str) -> Optional[str]:
@@ -622,7 +555,6 @@ def get_latest_timestamp(client: bigquery.Client, table_id: str) -> Optional[str
         if not result.empty and result['max_date'].iloc[0] is not None:
             return result['max_date'].iloc[0].strftime('%Y-%m-%d')
     except Exception as e:
-        print(f"   ⚠️  Could not get latest timestamp: {e}")
     
     return None
 
@@ -718,15 +650,11 @@ def main():
     if args.config:
         try:
             config = load_config(args.config)
-            print(f"📋 Loaded config: {args.config}")
-            print(f"  Topic Group: {topic_group_id}")
             
             # Validate topic group exists in config
             if 'topic_groups' in config:
                 if topic_group_id not in config['topic_groups']:
                     available = ', '.join(config['topic_groups'].keys())
-                    print(f"❌ Error: Topic group '{topic_group_id}' not found in config")
-                    print(f"   Available groups: {available}")
                     sys.exit(1)
                 
                 # Get topics from selected group
@@ -734,10 +662,7 @@ def main():
                 if not topics and 'topics' in group_config:
                     topics = group_config['topics']
                     description = group_config.get('description', '')
-                    print(f"  Description: {description}")
-                    print(f"  Topics: {', '.join(topics[:5])}{'...' if len(topics) > 5 else ''}")
             else:
-                print(f"⚠️  Warning: No topic_groups found in config, using command-line topics")
             
             if not start_date and 'date_range' in config:
                 start_date = config['date_range'].get('start_date')
@@ -749,15 +674,11 @@ def main():
             # Read frequency from nested config (aggregation.frequency)
             if 'aggregation' in config and 'frequency' in config['aggregation']:
                 frequency = config['aggregation']['frequency']
-                print(f"  Frequency: {frequency}")
             
         except FileNotFoundError:
             if args.config != 'configs/gdelt.yaml':
-                print(f"⚠️  Config not found: {args.config}")
     
     if not topics:
-        print(f"❌ Error: No topics specified")
-        print(f"   Either use --topic-group with config or provide --topics")
         sys.exit(1)
     
     # Set default frequency if not set
@@ -768,13 +689,10 @@ def main():
     if args.top_up:
         if not end_date:
             end_date = datetime.now().strftime('%Y-%m-%d')
-            print(f"📅 Top-up to: {end_date}")
         if not start_date:
             start_date = '2016-01-01'
     else:
         if not start_date or not end_date:
-            print("❌ Error: --start-date and --end-date required")
-            print("   Or use --config to load from file")
             sys.exit(1)
     
     # Validate dates
@@ -783,61 +701,41 @@ def main():
         end = datetime.strptime(end_date, '%Y-%m-%d')
         
         if end < start and not args.top_up:
-            print("Error: end_date must be >= start_date")
             sys.exit(1)
             
         # Warn if date range is very large (expensive query)
         days = (end - start).days
         if days > 90:
-            print(f"\n⚠️  Large date range ({days} days) - this query may be expensive")
             response = input("   Continue? [y/N]: ")
             if response.lower() != 'y':
-                print("Cancelled")
                 sys.exit(0)
                 
     except ValueError:
-        print("Error: Dates must be in YYYY-MM-DD format")
         sys.exit(1)
     
     # Validate project ID
     if not PROJECT_ID and not args.skip_bigquery:
-        print("\nError: GCP_PROJECT_ID environment variable not set")
-        print("Either set it in .env or use --skip-bigquery flag")
         sys.exit(1)
     
     # Handle top-up
     if args.top_up:
         if not PROJECT_ID:
-            print("❌ Error: GCP_PROJECT_ID required for top-up")
             sys.exit(1)
         client = bigquery.Client(project=PROJECT_ID)
         latest = get_latest_timestamp(client, f"{PROJECT_ID}.{DATASET_ID}.{TABLE_NAME}")
         if latest:
             start_date = latest
-            print(f"✨ Top-up from {start_date} to {end_date}")
         else:
-            print(f"⚠️  No data, fetching: {start_date} to {end_date}")
     
     # Check if data already exists (unless reload is specified)
     if not args.reload and not args.skip_bigquery:
         client = bigquery.Client(project=PROJECT_ID)
         main_table_id = f"{PROJECT_ID}.{DATASET_ID}.{TABLE_NAME}"
         
-        print(f"\n🔍 Checking for existing data...")
-        print(f"   Topic Group: {topic_group_id}")
-        print(f"   Frequency: {frequency}")
-        print(f"   Date Range: {start_date} to {end_date}")
         
         if check_existing_data(client, main_table_id, topic_group_id, frequency, start_date, end_date):
-            print(f"\n⚠️  Data already exists for these parameters!")
-            print(f"   Topic Group: {topic_group_id}")
-            print(f"   Frequency: {frequency}")
-            print(f"   Date Range: {start_date} to {end_date}")
-            print(f"\n   To reload this data, use:")
-            print(f"     --reload   (delete all data for this topic group and frequency, then reload)")
             sys.exit(0)
         else:
-            print(f"   ✓ No existing data found, proceeding with load")
     
     # Fetch sentiment data (15m intervals from BigQuery)
     df = fetch_gdelt_sentiment(
@@ -848,7 +746,6 @@ def main():
     )
     
     if df.empty:
-        print("\n⚠️  No data collected, exiting")
         sys.exit(0)
     
     # Resample to target frequency if needed
@@ -893,9 +790,6 @@ def main():
                 notes=f"Loaded via gdelt_load.py {'(top-up)' if args.top_up else '(full load)'}"
             )
     
-    print("\n" + "="*80)
-    print("  ✨ DONE!")
-    print("="*80)
 
 
 if __name__ == '__main__':

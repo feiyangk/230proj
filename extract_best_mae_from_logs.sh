@@ -40,21 +40,11 @@ if log_dir.exists():
                 dir_acc = ea.Scalars('Metrics/DirectionalAccuracy')
                 best_dir_acc = max(e.value for e in dir_acc)
             
-            print(f"✅ Best Validation MAE: {best_mae:.6f} (epoch {best_epoch})")
             if best_val_loss:
-                print(f"   Best Validation Loss: {best_val_loss:.6f}")
             if best_dir_acc:
-                print(f"   Best Directional Accuracy: {best_dir_acc * 100:.2f}%")
-            print(f"   Run: $BEST_RUN")
         else:
-            print("⚠️  Metrics/MAE not found in this run")
     except Exception as e:
-        print(f"❌ Error: {e}")
 else:
-    print(f"⚠️  Directory not found: {log_dir}")
-    print("")
-    print("Checking all runs to find best MAE...")
-    print("")
     
     # Check all runs and find the one with best MAE
     import glob
@@ -84,10 +74,7 @@ else:
             pass
     
     if best_run_name:
-        print(f"✅ Best Validation MAE across all runs: {best_overall_mae:.6f} (epoch {best_epoch})")
-        print(f"   Best run: {best_run_name}")
     else:
-        print("❌ Could not find any valid runs")
 EOF
 
 echo ""
@@ -95,4 +82,6 @@ echo "=========================================="
 echo "To check a specific run:"
 echo "  python3 scripts/training/pan_nan_fusion/extract_table_metrics.py --log-dir $LOG_BASE/<run_name>"
 echo "=========================================="
+
+
 

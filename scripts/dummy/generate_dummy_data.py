@@ -7,9 +7,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from data import generate_dummy_data
-from utils.logger import setup_logger
 
-logger = setup_logger()
 
 def main():
     parser = argparse.ArgumentParser(
@@ -66,11 +64,6 @@ def main():
     # Determine if multi-horizon
     multi_horizon = not args.single_target
     
-    logger.info("Generating dummy data...")
-    logger.info(f"  Samples: {args.n_samples}")
-    logger.info(f"  Features: {args.n_features}")
-    logger.info(f"  Multi-horizon: {multi_horizon}")
-    logger.info(f"  Output: {args.output_dir}")
     
     generate_dummy_data(
         n_samples=args.n_samples,
@@ -82,16 +75,11 @@ def main():
         shuffle=args.shuffle
     )
     
-    logger.info("✓ Data generation complete!")
-    logger.info(f"\nFiles created:")
-    logger.info(f"  {args.output_dir}/train.csv")
-    logger.info(f"  {args.output_dir}/val.csv")
-    logger.info(f"  {args.output_dir}/test.csv")
     
     if multi_horizon:
-        logger.info(f"\nTarget columns: target_1m, target_3m, target_6m")
+        pass
     else:
-        logger.info(f"\nTarget column: target")
+        pass
 
 if __name__ == '__main__':
     main()

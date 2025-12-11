@@ -32,9 +32,7 @@ sys.path.insert(0, str(project_root))
 env_file = project_root / '.env'
 if env_file.exists():
     load_dotenv(env_file)
-    print(f"✅ Loaded environment from: {env_file}")
 else:
-    print(f"⚠️  No .env file found at: {env_file}")
 
 
 def load_data(config_path: str, force_refresh: bool = False):
@@ -57,14 +55,9 @@ def load_data(config_path: str, force_refresh: bool = False):
     
     create_data_loaders = data_loader_module.create_data_loaders
     
-    print("\n" + "="*80)
-    print("   Loading Training Data")
-    print("="*80)
     
     if force_refresh:
-        print("\n🔄 Force refresh enabled - fetching from BigQuery...")
     else:
-        print("\n📂 Checking for cached data in data/processed/...")
     
     dataloaders, scalers = create_data_loaders(
         config_path=config_path,
@@ -72,7 +65,6 @@ def load_data(config_path: str, force_refresh: bool = False):
         force_refresh=force_refresh
     )
     
-    print("\n✅ Data loaded successfully!")
     return dataloaders, scalers
 
 
@@ -98,21 +90,10 @@ def train_model(config_path: str):
     
     train_fn = train_module.train
     
-    print("\n" + "="*80)
-    print("   Starting TFT Training (Local)")
-    print("="*80)
-    print(f"\nConfig: {config_path}")
-    print(f"Output: models/tft/tft_best.pt")
-    print()
     
     # Run training
     train_fn(config_path)
     
-    print("\n" + "="*80)
-    print("   Training Complete!")
-    print("="*80)
-    print(f"\n✅ Model saved to: models/tft/tft_best.pt")
-    print(f"📊 Logs saved to: logs/")
 
 
 def main():
@@ -153,14 +134,10 @@ Examples:
     # Validate config file exists
     config_path = Path(args.config)
     if not config_path.exists():
-        print(f"❌ Error: Config file not found: {config_path}")
         sys.exit(1)
     
     # Check environment variables
     if not os.getenv('GCP_PROJECT_ID'):
-        print("⚠️  Warning: GCP_PROJECT_ID not set")
-        print("   Set it with: export GCP_PROJECT_ID=your-project-id")
-        print("   Or add to .env file in project root")
         sys.exit(1)
     
     try:
@@ -171,7 +148,6 @@ Examples:
         train_model(args.config)
         
     except Exception as e:
-        print(f"\n❌ Training failed: {str(e)}")
         import traceback
         traceback.print_exc()
         sys.exit(1)

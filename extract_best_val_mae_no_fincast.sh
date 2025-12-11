@@ -26,12 +26,10 @@ from pathlib import Path
 try:
     from tensorboard.backend.event_processing.event_accumulator import EventAccumulator
 except ImportError:
-    print("Error: TensorBoard not available. Install with: pip install tensorboard")
     sys.exit(1)
 
 log_path = Path("$log_dir")
 if not log_path.exists():
-    print(f"Log directory not found: $log_dir")
     sys.exit(1)
 
 try:
@@ -69,28 +67,15 @@ try:
             results['best_dir_acc'] = best_dir_acc
     
     if results:
-        print(f"✅ Found metrics:")
         if 'best_val_mae' in results:
-            print(f"   Best Validation MAE: {results['best_val_mae']:.6f} (epoch {results['best_epoch']})")
-            print(f"   Final Validation MAE: {results['final_mae']:.6f}")
         if 'best_val_loss' in results:
-            print(f"   Best Validation Loss: {results['best_val_loss']:.6f}")
         if 'best_dir_acc' in results:
-            print(f"   Best Directional Accuracy: {results['best_dir_acc'] * 100:.2f}%")
         if 'total_epochs' in results:
-            print(f"   Total epochs: {results['total_epochs']}")
-        print(f"   Log directory: $log_dir")
-        print("")
     else:
-        print("⚠️  No validation MAE metrics found")
-        print(f"   Available tags: {scalar_tags[:5]}...")
-        print("")
         
 except Exception as e:
-    print(f"❌ Error reading TensorBoard log: {e}")
     import traceback
     traceback.print_exc()
-    print("")
 EOF
 
 done
@@ -103,4 +88,6 @@ echo ""
 echo "To extract from a specific log directory:"
 echo "  python3 scripts/training/pan_nan_fusion/extract_table_metrics.py --log-dir <path>"
 echo ""
+
+
 

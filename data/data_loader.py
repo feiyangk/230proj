@@ -7,9 +7,7 @@ import tensorflow as tf
 from typing import Tuple, Optional, List, Dict, Any
 from google.cloud import bigquery
 from google.cloud import storage
-import logging
 
-logger = logging.getLogger(__name__)
 
 
 class DataLoader:
@@ -50,11 +48,9 @@ class DataLoader:
             self.target_columns = horizons_config.get('targets', [])
             if not self.target_columns:
                 raise ValueError("Multi-horizon enabled but no target columns specified")
-            logger.info(f"Multi-horizon mode: {len(self.target_columns)} targets - {self.target_columns}")
         else:
             self.target_column = self.data_config['features'].get('target_column', 'target')
             self.target_columns = [self.target_column]
-            logger.info(f"Single target mode: {self.target_column}")
     
     def load_data(
         self,
@@ -90,7 +86,6 @@ class DataLoader:
         else:
             raise ValueError(f"Unknown split: {split}")
         
-        logger.info(f"Loading {split} data from {file_path}")
         
         # Load file
         file_format = local_config['format']
@@ -118,11 +113,8 @@ class DataLoader:
         # Handle multi-horizon or single target
         if self.multi_horizon:
             y = df[self.target_columns].values  # Shape: (n_samples, n_horizons)
-            logger.info(f"Loaded {len(df)} samples with {len(self.feature_columns)} features, "
-                       f"{len(self.target_columns)} target horizons")
         else:
             y = df[self.target_columns[0]].values  # Shape: (n_samples,)
-            logger.info(f"Loaded {len(df)} samples with {len(self.feature_columns)} features")
         
         return X, y
     
@@ -142,7 +134,6 @@ class DataLoader:
             table_id = f"{bq_config['project_id']}.{bq_config['dataset_id']}.{bq_config[f'{split}_table']}"
             query = f"SELECT * FROM `{table_id}`"
         
-        logger.info(f"Querying BigQuery for {split} data")
         
         # Execute query
         df = self.bq_client.query(query).to_dataframe()
@@ -151,7 +142,6 @@ class DataLoader:
         bucket_name = gcs_config['bucket_name']
         export_path = f"{gcs_config['export_path']}{split}.parquet"
         
-        logger.info(f"Exporting to GCS: gs://{bucket_name}/{export_path}")
         
         # Save locally first, then upload
         local_path = f"data/processed/{split}.parquet"
@@ -179,11 +169,9 @@ class DataLoader:
         # Handle multi-horizon or single target
         if self.multi_horizon:
             y = df[self.target_columns].values  # Shape: (n_samples, n_horizons)
-            logger.info(f"Loaded {len(df)} samples with {len(self.feature_columns)} features, "
                        f"{len(self.target_columns)} target horizons from BigQuery")
         else:
             y = df[self.target_columns[0]].values  # Shape: (n_samples,)
-            logger.info(f"Loaded {len(df)} samples with {len(self.feature_columns)} features from BigQuery")
         
         return X, y
     

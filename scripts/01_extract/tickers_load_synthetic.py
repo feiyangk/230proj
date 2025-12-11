@@ -62,7 +62,6 @@ def calculate_indicator_warmup_dates(
         requested_start_date: User-requested start date (YYYY-MM-DD)
         frequency: Data frequency ('15m', '1h', 'daily', etc.)
         periods_required: Number of periods needed for warmup (e.g., 200 for SMA_200)
-        indicator_name: Name of indicator for logging (e.g., 'sma_200')
     
     Returns:
         Tuple of (warmup_fetch_start, indicator_value_start, actual_warmup_periods):
@@ -118,10 +117,6 @@ def calculate_indicator_warmup_dates(
         
         if fallback_result.empty or pd.isna(fallback_result['earliest_timestamp'].iloc[0]):
             # No data at all - ABORT
-            print(f"\n❌ ERROR: No raw data found for {ticker} ({frequency})")
-            print(f"   Indicator: {indicator_name} requires {periods_required} periods of warmup")
-            print(f"   Requested start: {requested_start_date}")
-            print(f"   Solution: Load raw data using tickers_load_polygon.py first")
             sys.exit(1)
         else:
             # Data exists but starts after ideal warmup - check if enough
@@ -145,12 +140,6 @@ def calculate_indicator_warmup_dates(
                 
                 indicator_value_start = adjusted_start
                 
-                print(f"  ⚠️  Adjusted start date for {indicator_name} (insufficient warmup)")
-                print(f"     Warmup fetch start: {warmup_fetch_start}")
-                print(f"     Requested start: {requested_start_date}")
-                print(f"     Indicator values from: {indicator_value_start.date()} (adjusted forward)")
-                print(f"     Warmup periods: {actual_warmup_periods} rows ({periods_required} required)")
-                print(f"     Note: First {periods_required} periods used for warmup")
             else:
                 # Sufficient warmup - calculate where indicator values start (after warmup)
                 if frequency in ['5m', '15m', '1h', 'hourly']:
@@ -159,11 +148,6 @@ def calculate_indicator_warmup_dates(
                 else:
                     indicator_value_start = earliest_ts + timedelta(days=periods_required)
                 
-                print(f"  ✅ Warmup data available for {indicator_name}")
-                print(f"     Warmup fetch start: {warmup_fetch_start}")
-                print(f"     Indicator values from: {indicator_value_start.date()} (after {periods_required} period warmup)")
-                print(f"     Requested start: {requested_start_date}")
-                print(f"     Warmup periods: {actual_warmup_periods} rows ({periods_required} required)")
     else:
         # Warmup data exists - calculate forward-filled periods available
         earliest_ts = result['earliest_timestamp'].iloc[0]
@@ -192,12 +176,6 @@ def calculate_indicator_warmup_dates(
             
             indicator_value_start = adjusted_start
             
-            print(f"  ⚠️  Adjusted start date for {indicator_name} (insufficient warmup)")
-            print(f"     Warmup fetch start: {warmup_fetch_start}")
-            print(f"     Requested start: {requested_start_date}")
-            print(f"     Indicator values from: {indicator_value_start.date()} (adjusted forward)")
-            print(f"     Warmup periods available: {actual_warmup_periods} / {periods_required} required")
-            print(f"     Note: First {periods_required} periods used for warmup")
         else:
             # Sufficient warmup - calculate where indicator values start (after warmup)
             if frequency in ['5m', '15m', '1h', 'hourly']:
@@ -206,11 +184,6 @@ def calculate_indicator_warmup_dates(
             else:
                 indicator_value_start = earliest_ts + timedelta(days=periods_required)
             
-            print(f"  ✅ Warmup data available for {indicator_name}")
-            print(f"     Warmup fetch start: {warmup_fetch_start}")
-            print(f"     Indicator values from: {indicator_value_start.date()} (after {periods_required} period warmup)")
-            print(f"     Requested start: {requested_start_date}")
-            print(f"     Warmup periods available: {actual_warmup_periods} / {periods_required} required")
     
     return warmup_fetch_start, indicator_value_start, actual_warmup_periods
 
@@ -265,7 +238,6 @@ def fetch_raw_ohlcv(
     if warmup_days > 0:
         start_dt = datetime.strptime(start_date, '%Y-%m-%d')
         extended_start = (start_dt - timedelta(days=warmup_days)).strftime('%Y-%m-%d')
-        print(f"  ⏪ Rewinding {warmup_days} days for warmup: {extended_start} → {start_date}")
     else:
         extended_start = start_date
     
@@ -288,9 +260,7 @@ def fetch_raw_ohlcv(
     ORDER BY timestamp ASC
     """
     
-    print(f"  💾 Fetching raw OHLCV data from BigQuery...")
     df = bq_client.query(query).to_dataframe()
-    print(f"  ✅ Fetched {len(df):,} rows")
     
     if df.empty or len(df) < 2:
         return df
@@ -408,7 +378,6 @@ def compute_synthetic_indicators(
     indicators_filter: set = None
 ) -> pd.DataFrame:
     """Compute all selected synthetic indicators."""
-    print(f"  📊 Computing synthetic indicators...")
     
     # Determine which indicator groups to compute
     if indicators_filter:
@@ -422,37 +391,29 @@ def compute_synthetic_indicators(
     # Compute selected indicators
     if 'returns' in groups_to_compute:
         df = compute_returns(df)
-        print(f"    ✅ Returns")
     
     if 'volatility' in groups_to_compute:
         if 'returns' not in df.columns:
             df = compute_returns(df)  # Volatility needs returns
         df = compute_volatility(df)
-        print(f"    ✅ Volatility")
     
     if 'momentum' in groups_to_compute:
         df = compute_momentum(df)
-        print(f"    ✅ Momentum")
     
     if 'volume' in groups_to_compute:
         df = compute_volume_indicators(df)
-        print(f"    ✅ Volume indicators")
     
     if 'range' in groups_to_compute:
         df = compute_range_indicators(df)
-        print(f"    ✅ Range indicators")
     
     if 'bollinger' in groups_to_compute:
         df = compute_bollinger_bands(df)
-        print(f"    ✅ Bollinger Bands")
     
     if 'sma' in groups_to_compute:
         df = compute_sma(df)
-        print(f"    ✅ Simple Moving Averages (SMA)")
     
     if 'ema' in groups_to_compute:
         df = compute_ema(df)
-        print(f"    ✅ Exponential Moving Averages (EMA)")
     
     return df
 
@@ -522,7 +483,6 @@ def save_to_bigquery(bq_client: bigquery.Client, rows: list, table_id: str) -> i
     if not rows:
         return 0
     
-    print(f"  💾 Loading {len(rows):,} rows to BigQuery...")
     
     try:
         # Use load_table_from_json instead of insert_rows_json
@@ -541,15 +501,12 @@ def save_to_bigquery(bq_client: bigquery.Client, rows: list, table_id: str) -> i
         # Wait for job to complete
         job.result()
         
-        print(f"  ✅ Successfully loaded {len(rows):,} rows")
         return len(rows)
         
     except Exception as e:
-        print(f"  ❌ Error loading data: {str(e)}")
         if hasattr(e, 'errors') and e.errors:
-            print(f"  ❌ Job errors:")
             for error in e.errors[:10]:
-                print(f"     {error}")
+                pass
         return 0
 
 
@@ -559,10 +516,6 @@ def merge_staging_to_main(
     main_table: str
 ):
     """Merge data from staging to main table with deduplication."""
-    print("\n" + "=" * 80)
-    print("   Merging Staging to Main Table")
-    print("=" * 80)
-    print()
     
     merge_query = f"""
     MERGE `{main_table}` T
@@ -623,22 +576,17 @@ def merge_staging_to_main(
               S.ingested_at)
     """
     
-    print("🔄 Running MERGE query...")
     merge_job = bq_client.query(merge_query)
     merge_job.result()
     
     stats = merge_job._properties.get('statistics', {}).get('query', {})
     rows_affected = stats.get('numDmlAffectedRows', 'unknown')
     
-    print(f"✅ Merged {rows_affected} rows")
     
     # Truncate staging table
-    print("\n🗑️  Truncating staging table...")
     truncate_query = f"TRUNCATE TABLE `{staging_table}`"
     truncate_job = bq_client.query(truncate_query)
     truncate_job.result()
-    print("✅ Staging table cleared")
-    print()
 
 
 def purge_ticker_data(
@@ -647,38 +595,23 @@ def purge_ticker_data(
     tickers: list
 ):
     """Delete ALL synthetic indicator data for specified tickers."""
-    print("\n" + "=" * 80)
-    print("   🚨 PURGING ALL SYNTHETIC INDICATORS FOR TICKERS 🚨")
-    print("=" * 80)
-    print()
     
     ticker_list = "', '".join(tickers)
     
-    print(f"⚠️  WARNING: Deleting ALL synthetic indicators for {len(tickers)} ticker(s):")
-    print(f"   Tickers: {', '.join(tickers)}")
-    print(f"   This will remove data for ALL dates and ALL frequencies!")
-    print()
     
     response = input("Type 'DELETE' to confirm: ")
     if response != 'DELETE':
-        print("❌ Purge cancelled")
-        print()
         return
     
     try:
         delete_query = f"DELETE FROM `{table}` WHERE ticker IN ('{ticker_list}')"
-        print("\n🗑️  Executing deletion...")
         delete_job = bq_client.query(delete_query)
         delete_job.result()
         
         stats = delete_job._properties.get('statistics', {}).get('query', {})
         rows_deleted = int(stats.get('numDmlAffectedRows', 0))
         
-        print(f"✅ Purged {rows_deleted:,} rows")
-        print()
     except Exception as e:
-        print(f"❌ Purge failed: {str(e)}")
-        print()
 
 
 def get_latest_timestamp(bq_client: bigquery.Client, table: str, ticker: str, frequency: str):
@@ -705,7 +638,6 @@ def get_latest_timestamp(bq_client: bigquery.Client, table: str, ticker: str, fr
         if not result.empty and pd.notna(result['latest_timestamp'].iloc[0]):
             return result['latest_timestamp'].iloc[0]
     except Exception as e:
-        print(f"   Error checking latest timestamp: {str(e)}")
     
     return None
 
@@ -725,10 +657,6 @@ def flush_existing_data(
         indicators_filter: If provided, only NULL out these specific indicators.
                           If None, delete entire rows.
     """
-    print("\n" + "=" * 80)
-    print("   Flushing Existing Synthetic Indicators")
-    print("=" * 80)
-    print()
     
     ticker_list = "', '".join(tickers)
     
@@ -746,11 +674,6 @@ def flush_existing_data(
               AND frequency = '{frequency}'
             """
             
-            print(f"  Updating specific indicators for {len(tickers)} ticker(s)...")
-            print(f"   Indicators: {', '.join(sorted(indicators_filter))}")
-            print(f"   Date range: {start_date} to {end_date}")
-            print(f"   Frequency: {frequency}")
-            print(f"   Action: Setting columns to NULL (preserving other indicators)")
             
             update_job = bq_client.query(update_query)
             update_job.result()
@@ -758,8 +681,6 @@ def flush_existing_data(
             stats = update_job._properties.get('statistics', {}).get('query', {})
             rows_updated = int(stats.get('numDmlAffectedRows', 0))
             
-            print(f"  Updated {rows_updated:,} rows (set {len(indicators_filter)} indicators to NULL)")
-            print()
         else:
             # Full delete: Remove entire rows
             delete_query = f"""
@@ -769,9 +690,6 @@ def flush_existing_data(
               AND frequency = '{frequency}'
             """
             
-            print(f"  Deleting ALL indicators for {len(tickers)} ticker(s)...")
-            print(f"   Date range: {start_date} to {end_date}")
-            print(f"   Frequency: {frequency}")
             
             delete_job = bq_client.query(delete_query)
             delete_job.result()
@@ -779,11 +697,7 @@ def flush_existing_data(
             stats = delete_job._properties.get('statistics', {}).get('query', {})
             rows_deleted = int(stats.get('numDmlAffectedRows', 0))
             
-            print(f"  Deleted {rows_deleted:,} entire rows")
-            print()
     except Exception as e:
-        print(f"  Flush failed: {str(e)}")
-        print()
 
 
 def compute_and_save_indicators(
@@ -800,27 +714,14 @@ def compute_and_save_indicators(
     dry_run: bool = False
 ):
     """Main function to compute and save synthetic indicators."""
-    print("=" * 80)
-    print("   Inflation prediction - Synthetic Indicators Computation")
-    print("=" * 80)
-    print(f"\nProject: {PROJECT_ID}")
-    print(f"Dataset: {DATASET_ID}")
-    print(f"Tickers: {', '.join(tickers)}")
-    print(f"Date range: {start_date} to {end_date}")
-    print(f"Frequency: {frequency.upper()}")
     if indicators_filter:
-        print(f"Indicators: {', '.join(sorted(indicators_filter))}")
     if dry_run:
-        print(f"Mode: DRY RUN (no data will be loaded)")
-    print()
     
     # Validate configuration
     if not PROJECT_ID:
-        print("  Error: GCP_PROJECT_ID not set")
         return
     
     # Initialize BigQuery client
-    print("  Initializing BigQuery client...")
     bq_client = bigquery.Client(project=PROJECT_ID)
     
     # Table IDs
@@ -831,12 +732,10 @@ def compute_and_save_indicators(
     if purge_tickers:
         purge_ticker_data(bq_client, main_table, tickers)
         if start_date == '2000-01-01' and end_date == '2000-01-01':
-            print("\n  Purge complete! Skipping computation.\n")
             return
     elif flush_existing:
         flush_existing_data(bq_client, main_table, tickers, start_date, end_date, frequency, indicators_filter)
         if flush_only:
-            print("\n✅ Flush complete! Exiting without computation.\n")
             return
     
     # Statistics
@@ -874,22 +773,17 @@ def compute_and_save_indicators(
     
     warmup_days = calculate_warmup_days(frequency, max_periods) if max_periods > 0 else 0
     if warmup_days > 0:
-        print(f"\n  Warmup: {max_periods} periods = {warmup_days} days for {frequency}\n")
     
     # Clear staging table before loading new data
-    print("\n  🗑️  Truncating staging table...")
     truncate_query = f"TRUNCATE TABLE `{staging_table}`"
     bq_client.query(truncate_query).result()
-    print("  ✅ Staging table cleared\n")
     
     # Process each ticker
     for ticker_idx, ticker in enumerate(tickers, 1):
-        print(f"[{ticker_idx}/{len(tickers)}]  Processing {ticker}...")
         
         # Skip if ticker already has data (unless flush_existing or purge_tickers)
         if not flush_existing and not purge_tickers:
             if check_ticker_exists(bq_client, ticker, frequency):
-                print(f"  ⏭️  SKIPPED: {ticker} already has synthetic indicators (use --reload to overwrite)\n")
                 skipped_tickers.append(ticker)
                 continue
         
@@ -902,8 +796,6 @@ def compute_and_save_indicators(
             latest_ts = get_latest_timestamp(bq_client, main_table, ticker, frequency)
             
             if latest_ts:
-                print(f"   Top-up mode details:")
-                print(f"     Latest timestamp in BigQuery: {latest_ts.strftime('%Y-%m-%d %H:%M:%S')}")
                 
                 # Add 1 period based on frequency
                 if frequency in ['daily', '1d']:
@@ -922,8 +814,6 @@ def compute_and_save_indicators(
                     next_date = latest_ts + timedelta(days=1)
                     period_name = "1 day (default)"
                 
-                print(f"     Next period ({period_name}): {next_date.strftime('%Y-%m-%d %H:%M:%S')}")
-                print(f"     Requested end date: {ticker_end_date}")
                 
                 ticker_start_date = next_date.strftime('%Y-%m-%d')
                 
@@ -932,20 +822,13 @@ def compute_and_save_indicators(
                 end_datetime = datetime.strptime(ticker_end_date, '%Y-%m-%d').replace(hour=23, minute=59, second=59)
                 end_datetime = pytz.UTC.localize(end_datetime)
                 
-                print(f"     End datetime (EOD): {end_datetime.strftime('%Y-%m-%d %H:%M:%S')}")
-                print(f"     Comparison: {next_date.strftime('%Y-%m-%d %H:%M:%S')} > {end_datetime.strftime('%Y-%m-%d %H:%M:%S')} ? {next_date > end_datetime}")
                 
                 # Skip if next period is after end of day
                 if next_date > end_datetime:
-                    print(f"   Already up-to-date! Latest data is at or past end date.")
-                    print(f"   Note: Top-up only fills forward from latest timestamp, not gaps in history.")
                     continue
                 else:
-                    print(f"   Computing from {ticker_start_date} to {ticker_end_date}")
             else:
-                print(f"   No existing data found. Using start date: {ticker_start_date}")
         
-        # Determine indicator name for logging
         indicator_name = f"max warmup ({max_periods} periods)"
         if indicators_filter:
             # Find the indicator with max periods
@@ -1014,32 +897,17 @@ def compute_and_save_indicators(
                 )
                 indicator_rows = len(indicator_range)
                 
-                print(f"\n  📊 DRY RUN: Data availability check")
-                print(f"     Indicator values would span: {indicator_value_start.date()} to {last_ts.date()}")
-                print(f"     Total rows to fetch (with forward-fill): {total_rows_with_ff:,}")
-                print(f"     Indicator entries to load: {indicator_rows:,} (warmup excluded)")
-                print(f"     Indicators to compute: {len(indicators_filter) if indicators_filter else 'all'}")
-                print(f"\n  🎯 Skipping actual data load...\n")
             else:
-                print(f"\n  ⚠️  DRY RUN: No raw data found in range")
-                print(f"     Would attempt to fetch from {warmup_fetch_start} to {ticker_end_date}")
-                print(f"\n  🎯 Skipping actual data load...\n")
             
             continue
         
         # Fetch raw OHLCV from warmup start
-        print(f"\n  📊 Fetching and computing indicators...")
-        print(f"     Fetching from: {warmup_fetch_start}")
-        print(f"     Computing to: {ticker_end_date}")
         
         df = fetch_raw_ohlcv(bq_client, ticker, warmup_fetch_start, ticker_end_date, frequency, warmup_days=0)
         
         if df.empty:
-            print(f"   ❌ No raw OHLCV data found for {ticker}")
-            print(f"   ℹ️  Run tickers_load_polygon.py first to fetch raw data")
             continue
         
-        print(f"     Raw data fetched: {len(df):,} rows ({df['timestamp'].min().date()} to {df['timestamp'].max().date()})")
         
         # Compute synthetic indicators on full dataset (including warmup period)
         df = compute_synthetic_indicators(df, indicators_filter)
@@ -1052,7 +920,6 @@ def compute_and_save_indicators(
                 df_before = len(df)
                 
                 # Log per-indicator first valid dates BEFORE filtering
-                print(f"\n  📊 Indicator warmup completion dates:")
                 total_rows = len(df)
                 for ind in sorted(indicator_cols):
                     first_valid_idx = df[df[ind].notna()].index.min()
@@ -1062,9 +929,7 @@ def compute_and_save_indicators(
                     if pd.notna(first_valid_idx):
                         first_valid_date = df.loc[first_valid_idx, 'timestamp'].date()
                         pct = (ind_row_count / total_rows) * 100
-                        print(f"     {ind:20s}: {ind_row_count:6,} valid, {null_count:5,} nulls ({pct:5.1f}%) - from {first_valid_date}")
                     else:
-                        print(f"     {ind:20s}: {ind_row_count:6,} valid, {null_count:5,} nulls (  0.0%) - No valid data")
                 
                 # Keep rows where at least one indicator is not null
                 has_data = df[indicator_cols].notna().any(axis=1)
@@ -1072,21 +937,15 @@ def compute_and_save_indicators(
                 df_after = len(df)
                 warmup_excluded = df_before - df_after
                 first_valid = df['timestamp'].min().date()
-                print(f"\n  🎯 Saving {df_after:,} total rows from {first_valid} onwards")
-                print(f"     Warmup periods excluded: {warmup_excluded} rows")
             else:
-                print(f"  ⚠️  No indicator columns found in data")
         else:
             # No filter, keep all computed rows
             df_before = len(df)
             df = df[df['timestamp'] >= indicator_value_start]
             df_after = len(df)
             warmup_excluded = df_before - df_after
-            print(f"  🎯 Saving {df_after:,} rows from {indicator_value_start.date()} onwards")
-            print(f"     Warmup periods excluded: {warmup_excluded} rows ({max_periods} periods for {indicator_name})")
         
         if df.empty:
-            print(f"   No valid data after warmup period")
             continue
         
         # Deduplicate by (ticker, timestamp, frequency) before saving
@@ -1100,13 +959,10 @@ def compute_and_save_indicators(
         rows = prepare_output_rows(df, indicators_filter)
         
         # Save to staging
-        print(f"\n  💾 Saving to BigQuery staging...")
         total_rows_inserted += save_to_bigquery(bq_client, rows, staging_table)
-        print(f"     Saved {len(rows):,} rows to staging table")
         
         # Show actual per-indicator statistics from saved data
         if indicators_filter:
-            print(f"\n  📊 Saved Per-Indicator Data:")
             indicator_cols = [col for col in indicators_filter if col in df_for_summary.columns]
             
             for ind in sorted(indicator_cols):
@@ -1116,11 +972,8 @@ def compute_and_save_indicators(
                     ind_count = len(ind_data)
                     ind_first = ind_data['timestamp'].min().date()
                     ind_last = ind_data['timestamp'].max().date()
-                    print(f"     {ind:20s}: {ind_count:,} rows ({ind_first} to {ind_last})")
                 else:
-                    print(f"     {ind:20s}: 0 rows (no valid data)")
         
-        print(f"\n  ✅ {ticker} complete!\n")
         total_tickers_processed += 1
     
     # Merge staging to main
@@ -1128,26 +981,10 @@ def compute_and_save_indicators(
         merge_staging_to_main(bq_client, staging_table, main_table)
     
     # Final summary
-    print("=" * 80)
     if dry_run:
-        print("   DRY RUN Complete!")
     else:
-        print("   Computation Complete!")
-    print("=" * 80)
     if dry_run:
-        print("  Summary:")
-        print(f"  Tickers analyzed: {len(tickers)}")
-        print("=" * 80)
-    print("   Computation Complete!")
-    print("=" * 80)
-    print("📊 Statistics:")
-    print(f"  Tickers requested: {len(tickers)}")
-    print(f"  Tickers processed: {total_tickers_processed}")
     if skipped_tickers:
-        print(f"  Tickers skipped: {len(skipped_tickers)} (already exist: {', '.join(skipped_tickers)})")
-    print(f"  Total rows inserted: {total_rows_inserted:,}")
-    print(f"  Frequency: {frequency}")
-    print()
 
 
 def load_config(config_path: str = 'configs/tickers.yaml') -> dict:
@@ -1164,7 +1001,6 @@ def load_config(config_path: str = 'configs/tickers.yaml') -> dict:
         with open(config_path, 'r') as f:
             return yaml.safe_load(f)
     except FileNotFoundError:
-        print(f"⚠️  Config file not found: {config_path}")
         return None
 
 
@@ -1310,17 +1146,12 @@ def main():
         config = load_config(args.config)
         if config and 'tickers' in config:
             tickers = config['tickers']
-            print(f"📋 Loaded {len(tickers)} tickers from {args.config}")
-            print(f"   Tickers: {', '.join(tickers[:10])}{'...' if len(tickers) > 10 else ''}")
         else:
-            print(f"❌ Error: No tickers found in config file {args.config}")
             sys.exit(1)
     else:
         # Tickers specified on command line
-        print(f"📋 Using {len(tickers)} ticker(s) from command line")
     
     if not tickers:
-        print("❌ Error: No tickers specified. Use --tickers or ensure config file has tickers")
         sys.exit(1)
     
     # Validate flush-only
@@ -1329,16 +1160,13 @@ def main():
         args.flush = True
         
         if not args.indicators:
-            print("❌ Error: --flush-only requires --indicators (specify which indicators to clear)")
             sys.exit(1)
         
         # If dates not specified, flush ALL entries for the indicators
         if not args.start_date and not args.end_date:
             start_date = '2000-01-01'
             end_date = '2099-12-31'
-            print(f"🗑️  Flush-only mode: No dates specified, flushing ALL entries")
         elif not args.start_date:
-            print("❌ Error: --flush-only with --end requires --start date")
             sys.exit(1)
         else:
             start_date = args.start_date
@@ -1350,16 +1178,13 @@ def main():
     elif args.top_up:
         # Top-up mode: start_date required (for warmup calculation), end_date defaults to today
         if not args.start_date:
-            print("  Error: --start date required for --top-up (needed for warmup calculation)")
             sys.exit(1)
         start_date = args.start_date
         if not args.end_date:
             end_date = datetime.now().strftime('%Y-%m-%d')
-            print(f"  Top-up to today: {end_date}")
         else:
             end_date = args.end_date
     elif not args.start_date:
-        print("  Error: --start date is required")
         sys.exit(1)
     else:
         start_date = args.start_date
@@ -1372,17 +1197,12 @@ def main():
         # User specified indicators on command line
         indicators_filter = set(args.indicators)
         if args.flush_only:
-            print(f"🗑️  Flush-only mode: Clearing {', '.join(sorted(indicators_filter))}\n")
         else:
-            print(f"📌 Using {len(indicators_filter)} indicator(s) from command line: {', '.join(sorted(indicators_filter))}\n")
     elif config and 'indicators' in config and config['indicators']:
         # No indicators specified, load from config
         indicators_filter = set(config['indicators'])
-        print(f"📌 Loaded {len(indicators_filter)} indicators from {args.config}")
-        print(f"   Indicators: {', '.join(sorted(list(indicators_filter)[:10]))}{'...' if len(indicators_filter) > 10 else ''}\n")
     else:
         # No indicators specified and none in config, compute all
-        print(f"📌 No indicators filter specified - computing all available indicators\n")
     
     # Run computation
     compute_and_save_indicators(

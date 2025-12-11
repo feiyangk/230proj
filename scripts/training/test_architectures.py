@@ -39,59 +39,35 @@ def test_forward_pass(checkpoint_path, batch_size, seq_len, n_features):
     3. Load the state dict
     4. Run forward pass
     """
-    print(f"\n{'='*80}")
-    print(f"   Testing Model Forward Pass")
-    print(f"{'='*80}\n")
     
     # Load checkpoint
-    print(f"📦 Loading checkpoint: {checkpoint_path}")
     checkpoint = torch.load(checkpoint_path, map_location='cpu', weights_only=False)
     
     # Get config
     config = checkpoint.get('config', {})
     model_config = config.get('model', {})
     
-    print(f"\n⚙️  Model Configuration:")
     for key, value in model_config.items():
-        print(f"   {key:20s}: {value}")
     
     # Create dummy input
-    print(f"\n🧪 Creating dummy input:")
-    print(f"   Batch size: {batch_size}")
-    print(f"   Sequence length: {seq_len}")
-    print(f"   Features: {n_features}")
     
     dummy_input = torch.randn(batch_size, seq_len, n_features)
-    print(f"   Input shape: {dummy_input.shape}")
     
-    print(f"\n⚠️  Note: Forward pass test requires model implementation")
-    print(f"   To complete this test:")
-    print(f"   1. Implement your model class (e.g., TFTModel)")
-    print(f"   2. Load model: model = TFTModel(config)")
-    print(f"   3. Load weights: model.load_state_dict(checkpoint['model_state_dict'])")
-    print(f"   4. Run forward: output = model(dummy_input)")
     
     # Show expected output shape
     prediction_horizons = config.get('data', {}).get('prediction_horizons', [1])
     expected_output_shape = (batch_size, len(prediction_horizons))
     
-    print(f"\n🎯 Expected output shape: {expected_output_shape}")
-    print(f"   (batch_size={batch_size}, num_horizons={len(prediction_horizons)})")
     
-    print(f"\n{'='*80}")
 
 
 def compare_architectures(checkpoints):
     """Compare multiple model checkpoints."""
-    print(f"\n{'='*80}")
-    print(f"   Comparing Model Architectures")
-    print(f"{'='*80}\n")
     
     results = []
     
     for ckpt_path in checkpoints:
         if not Path(ckpt_path).exists():
-            print(f"⚠️  Skipping {ckpt_path} (not found)")
             continue
         
         checkpoint = torch.load(ckpt_path, map_location='cpu', weights_only=False)
@@ -115,23 +91,14 @@ def compare_architectures(checkpoints):
         })
     
     # Print comparison table
-    print(f"{'Model':<40} {'Params':>12} {'Val Loss':>10} {'Val MAE':>10} {'Epoch':>6}")
-    print("-" * 80)
     
     for result in results:
         model_name = Path(result['path']).stem
-        print(f"{model_name:<40} {result['params']:>12,} {result['val_loss']:>10.4f} {result['val_mae']:>10.4f} {result['epoch']:>6}")
     
     # Find best model
     if results:
         best = min(results, key=lambda x: x['val_loss'])
-        print("\n" + "="*80)
-        print(f"🏆 Best model: {Path(best['path']).stem}")
-        print(f"   Val Loss: {best['val_loss']:.4f}")
-        print(f"   Val MAE: {best['val_mae']:.4f}")
-        print(f"   Parameters: {best['params']:,}")
     
-    print(f"\n{'='*80}")
 
 
 def main():
@@ -193,12 +160,10 @@ Examples:
         # Test single model
         checkpoint_path = Path(args.checkpoint)
         if not checkpoint_path.exists():
-            print(f"❌ Error: Checkpoint not found: {checkpoint_path}")
             sys.exit(1)
         
         test_forward_pass(checkpoint_path, args.batch_size, args.seq_len, args.n_features)
     else:
-        print("❌ Error: Please provide --checkpoint or --compare")
         parser.print_help()
         sys.exit(1)
 

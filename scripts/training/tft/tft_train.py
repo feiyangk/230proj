@@ -284,7 +284,6 @@ def train(config_path: str, dataloaders: Optional[Dict] = None, scalers: Optiona
     
     # Load data if not provided
     if dataloaders is None:
-        print("\n📂 Loading data from data/processed/...")
         import importlib.util
         data_loader_path = project_root / 'scripts' / '02_features' / 'tft' / 'tft_data_loader.py'
         spec = importlib.util.spec_from_file_location('tft_data_loader', data_loader_path)
@@ -295,12 +294,8 @@ def train(config_path: str, dataloaders: Optional[Dict] = None, scalers: Optiona
             config_path=config_path,
             force_refresh=False
         )
-        print("✅ Data loaded!")
     
     # Print detailed feature information
-    print("\n" + "="*80)
-    print("   Feature Configuration")
-    print("="*80)
     
     # Get sample batch to determine actual feature count
     sample_batch = next(iter(dataloaders['train']))
@@ -309,26 +304,16 @@ def train(config_path: str, dataloaders: Optional[Dict] = None, scalers: Optiona
     lookback = batch_X.shape[1]
     num_horizons = batch_y.shape[1]
     
-    print(f"\n📊 Data Dimensions:")
-    print(f"  Lookback window: {lookback} timesteps")
-    print(f"  Number of features: {num_features}")
-    print(f"  Prediction horizons: {num_horizons}")
     
     # Load and display feature metadata
     time_varying_known = config['model'].get('time_varying_known', [])
     time_varying_unknown = config['model'].get('time_varying_unknown', [])
     
-    print(f"\n🔑 TIME-VARYING KNOWN Features ({len(time_varying_known)}):")
     for i, feat in enumerate(time_varying_known, 1):
-        print(f"  {i:2d}. {feat}")
     
-    print(f"\n📊 TIME-VARYING UNKNOWN Features ({len(time_varying_unknown)}):")
     for i, feat in enumerate(time_varying_unknown, 1):
-        print(f"  {i:2d}. {feat}")
     
     total_config_features = len(time_varying_known) + len(time_varying_unknown)
-    print(f"\n➡️  Total Features (config): {total_config_features}")
-    print(f"➡️  Total Features (actual data): {num_features}")
     
     # Load and print actual final features being used
     # Note: Config shows 14 base features, but data has more after pivoting (e.g., close_SPY, close_QQQ)
@@ -340,56 +325,28 @@ def train(config_path: str, dataloaders: Optional[Dict] = None, scalers: Optiona
                 metadata = yaml.safe_load(f)
                 if 'features' in metadata:
                     actual_features = metadata['features']
-                    print(f"\n📋 ACTUAL FEATURES USED IN TRAINING ({len(actual_features)}):")
-                    print(f"   (Ticker-specific features created through pivoting)")
-                    print(f"")
                     for i, feat in enumerate(actual_features, 1):
-                        print(f"   {i:2d}. {feat}")
                 else:
-                    print(f"\n⚠️  'features' key not found in metadata.yaml")
         else:
-            print(f"\n⚠️  metadata.yaml not found at {metadata_path}")
-            print(f"   Cannot display individual feature names")
-            print(f"   Config features (14) are expanded to {num_features} after pivoting")
     except Exception as e:
-        print(f"\n⚠️  Could not load actual feature names: {e}")
         import traceback
         traceback.print_exc()
     
     # Output targets
     horizons_config = config['data']['prediction_horizons']
-    print(f"\n🎯 Output Targets ({len(horizons_config)} horizons):")
     for i, h in enumerate(horizons_config, 1):
-        print(f"  {i}. Horizon {h} (target_{h}_periods_ahead)")
     
     # Setup device
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    print(f"\n🖥️  Device: {device}")
     if device.type == 'cuda':
-        print(f"   GPU: {torch.cuda.get_device_name(0)}")
-        print(f"   Memory: {torch.cuda.get_device_properties(0).total_memory / 1e9:.1f} GB")
     
     # Model hyperparameters from config
     model_config = config['model']
     training_config = config['training']
     
-    print("\n" + "="*80)
-    print("   Model Configuration")
-    print("="*80)
-    print(f"\nArchitecture: Temporal Fusion Transformer")
-    print(f"  Hidden size: {model_config['hidden_size']}")
-    print(f"  LSTM layers: {model_config['lstm_layers']}")
-    print(f"  Attention heads: {model_config['attention_heads']}")
-    print(f"  Dropout: {model_config['dropout']}")
-    print(f"\nTraining:")
-    print(f"  Epochs: {training_config['epochs']}")
-    print(f"  Batch size: {training_config['batch_size']}")
-    print(f"  Learning rate: {training_config['learning_rate']}")
-    print(f"  Early stopping patience: {training_config['early_stopping']['patience']}")
     
     # Setup TensorBoard
     writer = None
-    if config.get('logging', {}).get('tensorboard', False):
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         
         # Check for Vertex AI TensorBoard directory (set automatically by Vertex AI)
@@ -399,20 +356,12 @@ def train(config_path: str, dataloaders: Optional[Dict] = None, scalers: Optiona
             # Vertex AI managed TensorBoard - logs auto-sync
             log_dir = tensorboard_log_dir
             writer = SummaryWriter(str(log_dir))
-            print(f"\n📊 TensorBoard (Vertex AI): {log_dir}")
-            print(f"   Logs will auto-sync to TensorBoard instance")
         else:
             # Local or manual TensorBoard - use local paths
-            log_dir = Path(config.get('logging', {}).get('log_dir', 'logs/tensorboard')) / timestamp
             log_dir.mkdir(parents=True, exist_ok=True)
             writer = SummaryWriter(str(log_dir))
-            print(f"\n📊 TensorBoard logs → {log_dir}")
-            print(f"   View with: tensorboard --logdir {log_dir.parent}")
     
     # Initialize TFT model
-    print("\n" + "="*80)
-    print("   Initializing TFT Model")
-    print("="*80)
     
     # Pass actual feature count from data (after pivoting)
     model = SimplifiedTFT(config, num_features=num_features).to(device)
@@ -420,8 +369,6 @@ def train(config_path: str, dataloaders: Optional[Dict] = None, scalers: Optiona
     # Count parameters
     total_params = sum(p.numel() for p in model.parameters())
     trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
-    print(f"  Total parameters: {total_params:,}")
-    print(f"  Trainable parameters: {trainable_params:,}")
     
     # Setup optimizer and loss
     optimizer = optim.Adam(
@@ -436,9 +383,6 @@ def train(config_path: str, dataloaders: Optional[Dict] = None, scalers: Optiona
     output_dir.mkdir(parents=True, exist_ok=True)
     
     # Training loop
-    print("\n" + "="*80)
-    print("   Training Loop")
-    print("="*80)
     
     best_val_loss = float('inf')
     best_val_mae = float('inf')
@@ -481,20 +425,12 @@ def train(config_path: str, dataloaders: Optional[Dict] = None, scalers: Optiona
         all_targets = torch.cat(all_targets, dim=0)
         metrics = compute_metrics(all_preds, all_targets)
         
-        print(f"\n{'='*80}")
-        print(f"Epoch {epoch+1}/{training_config['epochs']}")
-        print(f"  Train Loss: {train_loss:.4f}")
-        print(f"  Val Loss: {val_loss:.4f}, MAE: {metrics['mae']:.4f}, RMSE: {metrics['rmse']:.4f}")
-        print(f"  Dir Acc: {metrics['dir_acc']:.2f}%")
-        print(f"  Grad Norm: avg={avg_grad_norm:.4f}, max={max_grad_norm:.4f}, min={min_grad_norm:.4f}")
         
         # Print layer-wise gradient stats
         if layer_grad_stats:
-            print(f"  Layer Gradients (batch 1):")
             for layer_name in ['VSN', 'Input', 'LSTM_L0', 'LSTM_L1', 'LSTM_L2', 'Attention', 'Feedforward', 'Output']:
                 if layer_name in layer_grad_stats:
                     stats = layer_grad_stats[layer_name]
-                    print(f"    {layer_name:12s}: norm={stats['avg_norm']:.4f}, max={stats['max_norm']:.4f}, std={stats['avg_std']:.4f}")
         
         # Log to TensorBoard
         if writer is not None:
@@ -524,26 +460,16 @@ def train(config_path: str, dataloaders: Optional[Dict] = None, scalers: Optiona
                 'scalers': scalers
             }
             torch.save(checkpoint, checkpoint_path)
-            print(f"  ✅ Saved checkpoint: {checkpoint_path}")
         else:
             patience_counter += 1
             if patience_counter >= training_config['early_stopping']['patience']:
-                print(f"\n⏹️  Early stopping triggered (patience: {patience_counter})")
                 break
     
     # Close TensorBoard writer
     if writer is not None:
         writer.close()
     
-    print("\n" + "="*80)
-    print("   Training Complete")
-    print("="*80)
-    print(f"  Best validation loss: {best_val_loss:.4f}")
-    print(f"  Best validation MAE: {best_val_mae:.4f}")
-    print(f"  Model saved: {output_dir / 'tft_best.pt'}")
     if writer is not None and not os.getenv('CLOUD_ML_JOB_ID'):
-        print(f"\n📊 View TensorBoard: tensorboard --logdir logs/tensorboard")
-    print("="*80)
 
 
 if __name__ == '__main__':

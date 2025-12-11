@@ -37,7 +37,6 @@ from pathlib import Path
 try:
     from tensorboard.backend.event_processing.event_accumulator import EventAccumulator
 except ImportError:
-    print("Error: TensorBoard not available")
     sys.exit(1)
 
 log_path = Path("$log_dir")
@@ -69,13 +68,8 @@ try:
                 if dir_acc_events:
                     best_dir_acc = max(e.value for e in dir_acc_events)
             
-            print(f"  ✅ Best Validation MAE: {best_mae:.6f} (epoch {best_epoch})")
             if best_val_loss:
-                print(f"     Best Validation Loss: {best_val_loss:.6f}")
             if best_dir_acc:
-                print(f"     Best Directional Accuracy: {best_dir_acc * 100:.2f}%")
-            print(f"     Directory: $log_dir")
-            print("")
 except Exception as e:
     # Silently skip directories that can't be read
     pass
@@ -87,4 +81,6 @@ echo ""
 echo "=========================================="
 echo "Done!"
 echo "=========================================="
+
+
 

@@ -30,15 +30,10 @@ if [ -f "$CHECKPOINT" ]; then
     python3 << 'PYEOF'
 import torch
 checkpoint = torch.load('models/decoder_transformer/decoder_transformer_best_ar.pt', map_location='cpu')
-print("Checkpoint keys:", list(checkpoint.keys()))
 if 'test_loss' in checkpoint:
-    print(f"\nTest Loss: {checkpoint['test_loss']}")
 if 'test_mae' in checkpoint:
-    print(f"Test MAE: {checkpoint['test_mae']}")
 if 'test_rmse' in checkpoint:
-    print(f"Test RMSE: {checkpoint['test_rmse']}")
 if 'test_dir_acc' in checkpoint:
-    print(f"Test Dir Acc: {checkpoint['test_dir_acc']}")
 PYEOF
 else
     echo "Checkpoint not found at $CHECKPOINT"

@@ -98,30 +98,16 @@ def update_config_with_hyperparameters(config_path: str, args) -> str:
     with open(temp_config_path, 'w') as f:
         yaml.dump(config, f)
     
-    print(f"\n" + "="*80)
-    print("   Hyperparameters")
-    print("="*80)
     # Print model-specific params
     model_config = config.get('model', {})
     if 'hidden_size' in model_config:
-        print(f"Hidden size: {model_config['hidden_size']}")
     if 'lstm_layers' in model_config:
-        print(f"LSTM layers: {model_config['lstm_layers']}")
     if 'd_model' in model_config:
-        print(f"d_model: {model_config['d_model']}")
     if 'n_layers' in model_config:
-        print(f"n_layers: {model_config['n_layers']}")
     if 'attention_heads' in model_config:
-        print(f"Attention heads: {model_config['attention_heads']}")
     if 'n_heads' in model_config:
-        print(f"n_heads: {model_config['n_heads']}")
     if 'dropout' in model_config:
-        print(f"Dropout: {model_config['dropout']}")
-    print(f"Learning rate: {config['training']['learning_rate']}")
-    print(f"Batch size: {config['training']['batch_size']}")
     if 'lookback_window' in config.get('data', {}):
-        print(f"Lookback: {config['data']['lookback_window']}")
-    print("="*80 + "\n")
     
     return temp_config_path
 
@@ -147,7 +133,6 @@ def upload_data_dir_to_gcs(local_dir: str, gcs_bucket: str, job_name: str, dir_t
     
     local_path = Path(local_dir)
     if not local_path.exists():
-        print(f"   ⚠️  {local_dir} not found, skipping...")
         return []
     
     storage_client = storage.Client()
@@ -165,7 +150,6 @@ def upload_data_dir_to_gcs(local_dir: str, gcs_bucket: str, job_name: str, dir_t
         job_type = "Single Job"
     
     uploaded = []
-    print(f"\n📤 Uploading {dir_type} data to GCS ({job_type})...")
     
     for file_path in local_path.glob('*'):
         if file_path.is_file():
@@ -174,7 +158,6 @@ def upload_data_dir_to_gcs(local_dir: str, gcs_bucket: str, job_name: str, dir_t
             blob.upload_from_filename(str(file_path))
             gcs_uri = f"gs://{gcs_bucket}/{blob_path}"
             uploaded.append(gcs_uri)
-            print(f"   ✅ {file_path.name} → {gcs_uri}")
     
     return uploaded
 
@@ -205,12 +188,8 @@ def upload_model_to_gcs(local_path: str, gcs_bucket: str, gcs_model_path: str, j
     
     blob = bucket.blob(blob_path)
     
-    print(f"\n📤 Uploading model to GCS ({job_type})...")
-    print(f"   Local: {local_path}")
-    print(f"   GCS: gs://{gcs_bucket}/{blob_path}")
     
     blob.upload_from_filename(local_path)
-    print(f"   ✅ Upload complete!")
     
     return f"gs://{gcs_bucket}/{blob_path}"
 
@@ -241,12 +220,7 @@ def report_metrics_to_vertex(val_loss: float, val_mae: float, dir_acc: float):
             global_step=1
         )
         
-        print(f"\n📊 Reported metrics to Vertex AI:")
-        print(f"   Val Loss: {val_loss:.4f}")
-        print(f"   Val MAE: {val_mae:.4f}")
-        print(f"   Dir Acc: {dir_acc:.2f}%")
     except ImportError:
-        print("\n⚠️  Hypertune not available, skipping metric reporting")
 
 
 def download_fincast_checkpoint(gcs_bucket: str, checkpoint_gcs_path: str = 'models/fincast/v1.pth'):
@@ -265,13 +239,8 @@ def download_fincast_checkpoint(gcs_bucket: str, checkpoint_gcs_path: str = 'mod
     # Check if checkpoint already exists
     if local_path.exists():
         size_mb = local_path.stat().st_size / (1024 * 1024)
-        print(f"✅ FinCast checkpoint already exists ({size_mb:.0f} MB)")
         return str(local_path)
     
-    print(f"\n📥 Downloading FinCast checkpoint from GCS...")
-    print(f"   gs://{gcs_bucket}/{checkpoint_gcs_path}")
-    print(f"   → {local_path}")
-    print(f"   Size: ~3.97 GB (may take 2-5 minutes)\n")
     
     # Create directory
     local_path.parent.mkdir(parents=True, exist_ok=True)
@@ -293,7 +262,6 @@ def download_fincast_checkpoint(gcs_bucket: str, checkpoint_gcs_path: str = 'mod
     blob.download_to_filename(str(local_path))
     
     size_mb = local_path.stat().st_size / (1024 * 1024)
-    print(f"✅ FinCast checkpoint downloaded ({size_mb:.0f} MB)\n")
     
     return str(local_path)
 
@@ -314,14 +282,9 @@ def load_from_dataset_version(version, gcs_bucket=None):
         project_id = os.getenv('GCP_PROJECT_ID', 'your-project')
         gcs_bucket = f"{project_id}-models"
     
-    print(f"\n" + "="*80)
-    print(f"   📦 Loading Dataset Version: {version}")
-    print("="*80)
     
     # Special case: 'local' means use mounted local data (for Docker testing)
     if version.lower() == 'local':
-        print(f"\n💻 Using local data (skipping GCS download)")
-        print(f"   Verifying local data exists...")
         
         if not Path('data/processed').exists() or not any(Path('data/processed').iterdir()):
             raise FileNotFoundError(
@@ -329,12 +292,8 @@ def load_from_dataset_version(version, gcs_bucket=None):
                 "Please ensure data is mounted or run data generation first."
             )
         
-        print(f"   ✅ Local data found in data/processed/")
-        print(f"\n✅ Dataset 'local' ready!")
-        print("="*80)
         return
     
-    print(f"   GCS Bucket: {gcs_bucket}")
     
     # Initialize GCS client
     storage_client = storage.Client()
@@ -367,32 +326,22 @@ def load_from_dataset_version(version, gcs_bucket=None):
         return True
     
     # Download processed data (needed for training)
-    print(f"\n📥 Downloading processed data...")
     gcs_processed_prefix = f"datasets/{version}/processed/"
     if download_directory(gcs_processed_prefix, 'data/processed'):
-        print(f"   ✅ Processed data loaded to: data/processed/")
     else:
         raise Exception(f"Failed to download processed data from gs://{gcs_bucket}/{gcs_processed_prefix}")
     
     # Download raw data (for reference/debugging)
-    print(f"\n📥 Downloading raw data...")
     gcs_raw_prefix = f"datasets/{version}/raw/"
     if download_directory(gcs_raw_prefix, 'data/raw'):
-        print(f"   ✅ Raw data loaded to: data/raw/")
     else:
-        print(f"   ⚠️  Raw data download failed (non-critical)")
     
     # Download manifest
-    print(f"\n📥 Downloading manifest...")
     try:
         manifest_blob = bucket.blob(f"datasets/{version}/manifest.yaml")
         manifest_blob.download_to_filename('data/manifest.yaml')
-        print(f"   ✅ Manifest loaded")
     except Exception as e:
-        print(f"   ⚠️  Manifest download failed (non-critical): {e}")
     
-    print(f"\n✅ Dataset version '{version}' loaded successfully!")
-    print("="*80 + "\n")
 
 
 def main():
@@ -408,9 +357,7 @@ def main():
         }
         if args.model_type in config_map:
             args.config = config_map[args.model_type]
-            print(f"📋 Auto-selected config: {args.config}")
     
-    # Set environment variables (needed for BigQuery access and TensorBoard logging)
     # Extract project ID from GCS bucket name (format: {project_id}-*-models)
     # Handle various bucket naming patterns
     if '-models' in args.gcs_bucket:
@@ -420,20 +367,10 @@ def main():
         project_id = os.getenv('GCP_PROJECT_ID', args.gcs_bucket.split('/')[0])
     os.environ['GCP_PROJECT_ID'] = project_id
     os.environ['GCP_REGION'] = os.getenv('GCP_REGION', 'us-central1')
-    os.environ['GCS_BUCKET'] = args.gcs_bucket  # For TensorBoard GCS logging
     os.environ['JOB_NAME'] = args.job_name       # For TensorBoard log organization
     
-    print("\n" + "="*80)
-    print(f"   Vertex AI Training ({args.model_type.upper()})")
-    print("="*80)
-    print(f"Job: {args.job_name}")
-    print(f"GCS Bucket: {args.gcs_bucket}")
-    print(f"Project ID: {project_id}")
     if args.dataset_version:
-        print(f"Dataset Version: {args.dataset_version} (pre-generated)")
     else:
-        print(f"Dataset: Will generate from BigQuery")
-    print("="*80 + "\n")
     
     # Load data from dataset version OR generate from BigQuery
     if args.dataset_version:
@@ -442,14 +379,12 @@ def main():
         # Data is now in data/processed/, skip data generation in training
     else:
         # Will generate data from BigQuery during training (current behavior)
-        print("\n⚠️  No dataset version provided, will generate from BigQuery...")
     
     # Download FinCast checkpoint if needed (check config first)
     with open(args.config, 'r') as f:
         config = yaml.safe_load(f)
     
     if config.get('fincast', {}).get('enabled', False):
-        print("\n🔧 FinCast enabled in config, downloading checkpoint...")
         download_fincast_checkpoint(
             gcs_bucket=args.gcs_bucket,
             checkpoint_gcs_path='models/fincast/v1.pth'
@@ -459,7 +394,6 @@ def main():
     temp_config_path = update_config_with_hyperparameters(args.config, args)
     
     # Train model
-    print("\n🚀 Starting training...\n")
     
     try:
         # Import training module dynamically (can't use standard import with numeric prefix)
@@ -504,18 +438,12 @@ def main():
             val_mae = checkpoint.get('val_mae', 0.0)
             dir_acc = checkpoint.get('val_dir_acc', 0.0)  # Match key from tft_train.py
             
-            print(f"\n✅ Training complete!")
-            print(f"   Best Val Loss: {val_loss:.4f}")
-            print(f"   Best Val MAE: {val_mae:.4f}")
-            print(f"   Dir Accuracy: {dir_acc:.2f}%")
             
             # Upload data files to GCS only if NOT using pre-generated dataset
             if not args.dataset_version:
-                print(f"\n📤 Uploading data to GCS (freshly generated from BigQuery)...")
                 raw_files = upload_data_dir_to_gcs('data/raw', args.gcs_bucket, args.job_name, 'raw')
                 processed_files = upload_data_dir_to_gcs('data/processed', args.gcs_bucket, args.job_name, 'processed')
             else:
-                print(f"\n⏭️  Skipping data upload (using pre-generated dataset: {args.dataset_version})")
             
             # Upload model to GCS
             gcs_model_uri = upload_model_to_gcs(
@@ -531,15 +459,10 @@ def main():
             # Report metrics to Vertex AI (for hyperparameter tuning)
             report_metrics_to_vertex(val_loss, val_mae, dir_acc)
         else:
-            print(f"\n⚠️  Model file not found: {local_model_path}")
             sys.exit(1)
         
-        print("\n" + "="*80)
-        print("   Training Complete!")
-        print("="*80)
         
     except Exception as e:
-        print(f"\n❌ Training failed: {str(e)}")
         import traceback
         traceback.print_exc()
         sys.exit(1)

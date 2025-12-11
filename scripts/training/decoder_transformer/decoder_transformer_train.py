@@ -36,10 +36,7 @@ if str(common_path) not in sys.path:
 
 try:
     import tensorboard_utils as tb_utils
-    print(f"\n✅ TensorBoard utilities loaded from: {tb_utils.__file__}")
 except ImportError as e:
-    print(f"\n⚠️  CRITICAL: Failed to import TensorBoard utilities: {e}")
-    print(f"   Looked in: {common_path}")
     raise
 
 
@@ -427,7 +424,6 @@ def train_epoch(model, train_loader, optimizer, criterion, device, clip_norm=Non
     clipped_grad_norms = []
     
     total_batches = len(train_loader)
-    print(f"\n  Training: 0/{total_batches} batches", end='', flush=True)
     
     for batch_idx, (X_batch, y_batch) in enumerate(train_loader):
         X_batch = X_batch.to(device)
@@ -458,9 +454,7 @@ def train_epoch(model, train_loader, optimizer, criterion, device, clip_norm=Non
         
         # Progress update every 10 batches or at end
         if (batch_idx + 1) % 10 == 0 or (batch_idx + 1) == total_batches:
-            print(f"\r  Training: {batch_idx + 1}/{total_batches} batches (loss: {total_loss / (batch_idx + 1):.4f})", end='', flush=True)
-    
-    print()  # New line after progress
+            pass
     avg_loss = total_loss / len(train_loader)
     
     # Unclipped stats
@@ -493,10 +487,8 @@ def evaluate(model, val_loader, criterion, device, use_teacher_forcing=True, log
     
     if log_mode:
         mode = "🎯 Teacher Forcing" if use_teacher_forcing else "🔄 Pure Autoregressive"
-        print(f"   Eval mode: {mode}")
     
     total_batches = len(val_loader)
-    print(f"  Validation: 0/{total_batches} batches", end='', flush=True)
     
     with torch.no_grad():
         for batch_idx, (X_batch, y_batch) in enumerate(val_loader):
@@ -517,9 +509,7 @@ def evaluate(model, val_loader, criterion, device, use_teacher_forcing=True, log
             
             # Progress update every batch or at end
             if (batch_idx + 1) % 1 == 0 or (batch_idx + 1) == total_batches:
-                print(f"\r  Validation: {batch_idx + 1}/{total_batches} batches (loss: {total_loss / (batch_idx + 1):.4f})", end='', flush=True)
     
-    print()  # New line after progress
     all_predictions = np.concatenate(all_predictions, axis=0)
     all_targets = np.concatenate(all_targets, axis=0)
     
@@ -578,7 +568,6 @@ def train(
     """
     # Set random seed for reproducibility if provided
     if seed is not None:
-        print(f"\n🌱 Setting random seed: {seed}")
         torch.manual_seed(seed)
         torch.cuda.manual_seed_all(seed)  # For multi-GPU setups
         np.random.seed(seed)
@@ -586,7 +575,6 @@ def train(
         # Ensure deterministic behavior in PyTorch (may reduce performance)
         torch.backends.cudnn.deterministic = True
         torch.backends.cudnn.benchmark = False
-        print(f"   ✅ Random seed set for PyTorch, NumPy, and Python random module")
     
     # Load config
     with open(config_path, 'r') as f:
@@ -600,7 +588,6 @@ def train(
     
     # Load data if not provided
     if dataloaders is None:
-        print(f"\n📂 Loading data from {resolved_data_dir} ...")
         from torch.utils.data import TensorDataset, DataLoader
         
         # Load preprocessed data directly from .npy files
@@ -616,12 +603,7 @@ def train(
                         cached_horizons = metadata.get('prediction_horizons', [])
                         config_horizons = config['data']['prediction_horizons']
                         if cached_horizons != config_horizons:
-                            print(f"\n⚠️  WARNING: Cached data horizons {cached_horizons} don't match config horizons {config_horizons}!")
-                            print(f"   The cached data was created with different horizons.")
-                            print(f"   Use --force-refresh to regenerate data with correct horizons.")
-                            print(f"   Continuing with cached data (may produce incorrect results)...")
                 except Exception as e:
-                    print(f"   Could not check metadata: {e}")
         
         train_X_np = np.load(data_dir / 'X_train.npy', allow_pickle=True)
         train_y_np = np.load(data_dir / 'y_train.npy', allow_pickle=True)
@@ -668,7 +650,6 @@ def train(
         val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=0)
         test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=0)
         
-        print("✅ Data loaded!")
         scalers = None  # Not needed for inference
     else:
         train_loader = dataloaders['train']
@@ -694,7 +675,6 @@ def train(
         output_dir = Path('models') / model_name
     output_dir.mkdir(parents=True, exist_ok=True)
     
-    print(f"\n📝 Run name: {run_name}")
     
     # Setup device
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -714,23 +694,13 @@ def train(
         num_horizons = sample_y.shape[0]
     
     # Print detailed configuration
-    print("\n" + "="*80)
-    print("   Decoder Transformer Configuration")
-    print("="*80)
     
-    print(f"\n📊 Data Dimensions:")
-    print(f"  Lookback window: {lookback} timesteps")
-    print(f"  Number of features: {num_features}")
-    print(f"  Prediction horizons: {num_horizons}")
     
     # Display date range from config
     if 'data' in config:
         data_cfg = config['data']
         start_date = data_cfg.get('start_date', 'N/A')
         end_date = data_cfg.get('end_date', 'N/A')
-        print(f"\n📅 Date Range:")
-        print(f"  Start: {start_date}")
-        print(f"  End: {end_date}")
         
         # Try to get total samples from metadata
         try:
@@ -743,7 +713,6 @@ def train(
                     test_samples = metadata.get('test_samples', 0)
                     total = train_samples + val_samples + test_samples
                     if total > 0:
-                        print(f"  Total sequences: {total:,} (train: {train_samples:,}, val: {val_samples:,}, test: {test_samples:,})")
         except Exception:
             pass
     
@@ -755,30 +724,18 @@ def train(
                 metadata = yaml.safe_load(f)
                 if 'features' in metadata:
                     actual_features = metadata['features']
-                    print(f"\n📋 ACTUAL FEATURES ({len(actual_features)}):")
                     for i, feat in enumerate(actual_features[:10], 1):  # Show first 10
-                        print(f"   {i:2d}. {feat}")
                     if len(actual_features) > 10:
-                        print(f"   ... and {len(actual_features) - 10} more")
     except Exception as e:
-        print(f"\n⚠️  Could not load feature metadata: {e}")
     
     horizons_config = config['data']['prediction_horizons']
-    print(f"\n🎯 Output Targets ({len(horizons_config)} horizons):")
     for i, h in enumerate(horizons_config, 1):
-        print(f"  {i}. Horizon {h} periods ahead")
     
     # Setup device with detailed info
     device = torch.device(device)
-    print(f"\n🖥️  Device: {device}")
     if device.type == 'cuda':
-        print(f"   GPU: {torch.cuda.get_device_name(0)}")
-        print(f"   Memory: {torch.cuda.get_device_properties(0).total_memory / 1e9:.1f} GB")
     
     # Print model architecture
-    print("\n" + "="*80)
-    print("   Model Architecture")
-    print("="*80)
     
     # Read FinCast and Fusion config from YAML to determine model type
     fincast_config = config.get('fincast', {})
@@ -787,9 +744,6 @@ def train(
     use_fusion = fusion_config.get('enabled', False)
     
     # Debug: Print config values to help diagnose issues
-    print(f"\n🔍 Config Check:")
-    print(f"   fincast.enabled: {use_fincast} (from config: {fincast_config})")
-    print(f"   fusion.enabled: {use_fusion} (from config: {fusion_config})")
     
     # Determine architecture name based on model type
     if use_fusion and use_fincast:
@@ -801,27 +755,10 @@ def train(
     else:
         architecture_name = "Decoder-Only Autoregressive Transformer"
     
-    print(f"\nArchitecture: {architecture_name}")
-    print(f"  d_model: {config['model']['d_model']}")
-    print(f"  n_layers: {config['model']['n_layers']}")
-    print(f"  n_heads: {config['model']['n_heads']}")
-    print(f"  d_ff: {config['model']['d_ff']}")
-    print(f"  dropout: {config['model']['dropout']}")
     
     # Print fusion-specific config if enabled
     if use_fusion:
-        print(f"\nFusion Configuration:")
-        print(f"  Sentiment hidden dim: {fusion_config.get('sentiment_hidden_dim', 64)}")
-        print(f"  Sentiment layers: {fusion_config.get('sentiment_layers', 2)}")
-        print(f"  Sentiment heads: {fusion_config.get('sentiment_heads', 4)}")
-        print(f"  Fusion hidden dim: {fusion_config.get('fusion_hidden_dim', 128)}")
     
-    print(f"\nTraining:")
-    print(f"  Epochs: {config['training']['epochs']}")
-    print(f"  Batch size: {config['training']['batch_size']}")
-    print(f"  Learning rate: {config['training']['learning_rate']}")
-    print(f"  Weight decay: {config['training'].get('weight_decay', 0.0)}")
-    print(f"  Gradient clip: {config['training'].get('gradient_clip_norm', None)}")
     
     # Initialize model (with or without FinCast/Fusion)
     if use_fusion:
@@ -836,7 +773,6 @@ def train(
                 "See scripts/03_training/README.md for setup instructions."
             )
 
-        print(f"\n🔧 Initializing PAN-NAN Fusion model...")
 
         # Build model config from YAML settings for the FinCast backbone.
         # Even if fincast.enabled is False, this structure is passed through so
@@ -855,11 +791,6 @@ def train(
         # When fusion is enabled, DecoderTransformerWithFinCast is swapped
         # with FusionDecoderTransformer (by the PAN-NAN training entrypoint),
         # which accepts fusion_config.
-        print(f"\n🔍 Model Config Values (for debugging):")
-        print(f"   model.d_model: {config['model'].get('d_model')}")
-        print(f"   model.d_ff: {config['model'].get('d_ff')}")
-        print(f"   fusion.sentiment_hidden_dim: {fusion_config.get('sentiment_hidden_dim')}")
-        print(f"   fusion.fusion_hidden_dim: {fusion_config.get('fusion_hidden_dim')}")
         model = DecoderTransformerWithFinCast(
             config=config,
             num_features=num_features,
@@ -876,7 +807,6 @@ def train(
                     "Please ensure the FinCast submodule is properly installed.\n"
                     "See scripts/03_training/README.md for setup instructions."
                 )
-            print(f"\n🔧 Initializing model with FinCast integration...")
             model_fincast_config = {
                 'd_model': fincast_config.get('d_model', 1280),
                 'n_heads': fincast_config.get('n_heads', 16),
@@ -894,15 +824,11 @@ def train(
                 decoder_transformer_class=DecoderOnlyTransformerAR
             ).to(device)
         else:
-            print(f"\n🔧 Initializing standard decoder transformer...")
             model = DecoderOnlyTransformerAR(config, num_features).to(device)
     
     # Count parameters
     total_params = sum(p.numel() for p in model.parameters())
     trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
-    print(f"\n🔧 Model Parameters:")
-    print(f"   Total: {total_params:,}")
-    print(f"   Trainable: {trainable_params:,}")
     
     # Setup TensorBoard
     use_teacher_forcing_eval = config['training'].get('eval_teacher_forcing', True)
@@ -924,7 +850,6 @@ def train(
         # Scale LR to handle much larger feature space and prevent gradient explosion
         lr_scale = fincast_config.get('lr_scale', 0.2)
         actual_lr = base_lr * lr_scale
-        print(f"\nℹ️  Adjusting learning rate for FinCast: {base_lr:.2e} → {actual_lr:.2e} ({lr_scale}x)")
     else:
         actual_lr = base_lr
     
@@ -944,7 +869,6 @@ def train(
         additional_model_info['FinCast Checkpoint'] = fincast_config.get('checkpoint_path', 'N/A')
         additional_model_info['FinCast LR Scale'] = f"{fincast_config.get('lr_scale', 1.0)}x"
     
-    # Get dataset metadata for logging
     dataset_version = None
     start_date = config.get('data', {}).get('start_date', 'N/A')
     end_date = config.get('data', {}).get('end_date', 'N/A')
@@ -986,23 +910,11 @@ def train(
     # Determine eval suffix for checkpoint naming
     eval_suffix = "_tf" if use_teacher_forcing_eval else "_ar"
     
-    print(f"\n Starting training for {epochs} epochs...")
-    print(f"   Device: {device}")
-    print(f"   Batch size: {config['training']['batch_size']}")
-    print(f"   Learning rate: {config['training']['learning_rate']}")
-    print(f"   Gradient clipping: {clip_norm}")
     eval_mode = "Teacher Forcing" if use_teacher_forcing_eval else "Pure Autoregressive"
-    print(f"   Evaluation mode: {eval_mode}")
-    print("\n" + "="*80)
     
     # Estimate training time
     if use_fincast:
-        print("\n⏱️  Estimated time per epoch (with FinCast on CPU): 30-60 minutes")
-        print(f"   Total estimated time for {epochs} epochs: {epochs * 0.75:.1f} hours")
     else:
-        print(f"\n⏱️  Estimated time per epoch: 5-10 minutes")
-        print(f"   Total estimated time for {epochs} epochs: {epochs * 0.125:.1f} hours")
-    print(f"   Training on {len(train_loader)} batches per epoch\n")
     
     training_start_time = time.time()
     
@@ -1013,7 +925,6 @@ def train(
         if not checkpoint_file.exists():
             raise FileNotFoundError(f"Checkpoint file not found: {checkpoint_path}")
         try:
-            print(f"\n📂 Loading checkpoint: {checkpoint_file}")
             # Clear GPU cache to reduce memory fragmentation before loading checkpoint
             if device.type == 'cuda':
                 torch.cuda.empty_cache()
@@ -1024,12 +935,8 @@ def train(
             start_epoch = checkpoint.get('epoch', 0) + 1
             best_val_loss = checkpoint.get('val_loss', float('inf'))
             best_val_mae = checkpoint.get('val_mae', float('inf'))
-            print(f"   ✅ Resuming from epoch {start_epoch} (best val_loss: {best_val_loss:.4f})")
         except Exception as e:
-            print(f"   ⚠️  Could not load checkpoint: {e}")
             import traceback
-            print(f"   Traceback: {traceback.format_exc()}")
-            print(f"   Starting from scratch...")
             start_epoch = 0
     
     for epoch in range(start_epoch, epochs):
@@ -1049,10 +956,6 @@ def train(
         epoch_time = time.time() - epoch_start_time
         total_elapsed = time.time() - training_start_time
         
-        print(f"\nEpoch {epoch+1}/{epochs} - {epoch_time/60:.1f} min (total: {total_elapsed/60:.1f} min)")
-        print(f"  Train Loss: {train_loss:.6f}")
-        print(f"  Val   Loss: {val_loss:.6f}, MAE: {mae:.6f}, RMSE: {rmse:.6f}")
-        print(f"  Dir Acc (H1): {dir_acc * 100:.2f}%")
         
         # Print per-horizon MAE
         horizon_strs = []
@@ -1060,10 +963,7 @@ def train(
             if 'MAE' in key:
                 horizon_strs.append(f"{key}={value:.6f}")
         if horizon_strs:
-            print(f"  Per-Horizon MAE: {', '.join(horizon_strs)}")
         
-        print(f"  Grad Norm (unclipped): avg={avg_unclipped:.4f}, max={max_unclipped:.4f}")
-        print(f"  Grad Norm (clipped):   avg={avg_clipped:.4f}, max={max_clipped:.4f}")
         
         # Log to TensorBoard
         try:
@@ -1076,7 +976,6 @@ def train(
             if writer is not None:
                 writer.flush()
         except Exception as e:
-            print(f"\n⚠️  ERROR logging epoch metrics: {e}")
             import traceback
             traceback.print_exc()
         
@@ -1093,9 +992,7 @@ def train(
                 break
             
             layer_stats = compute_layer_grad_stats(model)
-            print("Layer Gradients:")
             for layer_name, stats in sorted(layer_stats.items()):
-                print(
                     f"  {layer_name:15s}: "
                     f"norm={stats['norm']:.6f}, "
                     f"max={stats['max']:.6f}, "
@@ -1107,9 +1004,7 @@ def train(
                 tb_utils.log_gradients_and_weights(writer, model, epoch)
                 if writer is not None:
                     writer.flush()
-                print(f"  ✅ Logged histograms")
             except Exception as e:
-                print(f"  ⚠️  ERROR logging histograms: {e}")
                 import traceback
                 traceback.print_exc()
             
@@ -1118,13 +1013,10 @@ def train(
                 tb_utils.log_attention_heatmaps(writer, model, val_loader, device, epoch, num_samples=2)
                 if writer is not None:
                     writer.flush()
-                print(f"  ✅ Logged attention heatmaps")
             except Exception as e:
-                print(f"  ⚠️  ERROR logging attention heatmaps: {e}")
                 import traceback
                 traceback.print_exc()
         
-        print("")
         
         # Early stopping check
         if val_loss < best_val_loss:
@@ -1147,17 +1039,12 @@ def train(
                 'eval_teacher_forcing': use_teacher_forcing_eval,  # Track eval mode
                 'training_mode': 'teacher_forcing' if use_teacher_forcing_eval else 'autoregressive'
             }, checkpoint_path)
-            print(f"  ✅ Saved checkpoint: {checkpoint_path}")
         else:
             patience_counter += 1
             if patience_counter >= early_stopping_patience:
-                print(f"\n⏹️  Early stopping triggered (patience: {patience_counter})")
                 break
     
     # Final evaluation on test set
-    print("\n" + "="*80)
-    print("   Final Test Set Evaluation")
-    print("="*80)
     
     # Load best model from this run
     eval_suffix = "_tf" if use_teacher_forcing_eval else "_ar"
@@ -1166,8 +1053,6 @@ def train(
         checkpoint = torch.load(checkpoint_path, map_location=device, weights_only=False)
         model.load_state_dict(checkpoint['model_state_dict'])
     else:
-        print(f"⚠️  Checkpoint not found: {checkpoint_path}")
-        print("   Using current model state for test evaluation")
     
     test_loss, test_mae, test_rmse, test_dir_acc, test_per_horizon = evaluate(
         model, test_loader, criterion, device,
@@ -1176,11 +1061,6 @@ def train(
         horizons=horizons_config
     )
     
-    print(f"\n📊 Test Set Results:")
-    print(f"  Test Loss: {test_loss:.6f}")
-    print(f"  Test MAE: {test_mae:.6f}")
-    print(f"  Test RMSE: {test_rmse:.6f}")
-    print(f"  Test Dir Acc (H1): {test_dir_acc * 100:.2f}%")
     
     # Log per-horizon test metrics
     if test_per_horizon:
@@ -1189,7 +1069,6 @@ def train(
             if 'MAE' in key:
                 horizon_strs.append(f"{key}={value:.6f}")
         if horizon_strs:
-            print(f"  Per-Horizon MAE: {', '.join(horizon_strs)}")
     
     # Log hyperparameters to TensorBoard HParams dashboard
     hparams = {
@@ -1221,16 +1100,7 @@ def train(
     if writer is not None:
         writer.close()
     
-    print("\n" + "="*80)
-    print("   Training Complete")
-    print("="*80)
-    print(f"  Best validation loss: {best_val_loss:.4f}")
-    print(f"  Best validation MAE: {best_val_mae:.4f}")
     eval_mode_name = "Teacher Forcing" if use_teacher_forcing_eval else "Autoregressive"
-    print(f"  Evaluation mode: {eval_mode_name}")
-    print(f"  Model saved: {checkpoint_path}")
     if writer is not None and not os.getenv('CLOUD_ML_JOB_ID'):
-        print(f"\n📊 View TensorBoard: tensorboard --logdir logs/tensorboard")
-    print("="*80)
 
     return model, best_val_loss

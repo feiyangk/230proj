@@ -51,7 +51,6 @@ def run_training(config_path, run_name, epochs=50, seed=42, extra_args=None):
     
     # Print output in real-time
     if result.stdout:
-        print(result.stdout)
     
     return result
 
@@ -88,27 +87,12 @@ def grid_search(
     
     results = []
     
-    print("="*80)
-    print("Dimension Grid Search")
-    print("="*80)
-    print(f"Total combinations: {len(combinations)}")
-    print(f"d_model values: {d_model_values}")
     if tie_d_ff_to_d_model:
-        print(f"d_ff: 4x d_model (tied)")
     else:
-        print(f"d_ff values: {d_ff_values}")
-    print(f"sentiment_hidden_dim values: {sentiment_hidden_values}")
-    print(f"fusion_hidden_dim values: {fusion_hidden_values}")
-    print(f"Epochs per run: {epochs}")
     if extra_args:
-        print(f"Extra args: {' '.join(extra_args)}")
-    print("="*80)
     
     for i, (d_model, d_ff, sent_hidden, fusion_hidden) in enumerate(combinations):
         run_name = encode_dim_name(d_model, d_ff, sent_hidden, fusion_hidden)
-        print(f"\n[{i+1}/{len(combinations)}] Testing dimensions:")
-        print(f"  d_model: {d_model}, d_ff: {d_ff}, sent_hidden: {sent_hidden}, fusion_hidden: {fusion_hidden}")
-        print(f"  Run name: {run_name}")
         
         # Modify config
         with open(config_path, 'r') as f:
@@ -132,7 +116,6 @@ def grid_search(
             yaml.dump(config, f)
         
         try:
-            print(f"  🚀 Starting training...")
             
             result = run_training(temp_config, run_name, epochs, seed, extra_args)
             
@@ -147,10 +130,8 @@ def grid_search(
                 'success': success,
             })
             
-            print(f"  {'✅' if success else '❌'} Completed")
             
         except Exception as e:
-            print(f"  ❌ Error: {e}")
             results.append({
                 'd_model': d_model,
                 'd_ff': d_ff,
@@ -186,21 +167,9 @@ def random_search(
     
     results = []
     
-    print("="*80)
-    print("Dimension Random Search")
-    print("="*80)
-    print(f"Number of trials: {num_trials}")
-    print(f"d_model range: {d_model_range}")
     if tie_d_ff_to_d_model:
-        print(f"d_ff: 4x d_model (tied)")
     else:
-        print(f"d_ff range: {d_ff_range}")
-    print(f"sentiment_hidden_dim range: {sentiment_hidden_range}")
-    print(f"fusion_hidden_dim range: {fusion_hidden_range}")
-    print(f"Epochs per run: {epochs}")
     if extra_args:
-        print(f"Extra args: {' '.join(extra_args)}")
-    print("="*80)
     
     for i in range(num_trials):
         # Sample dimensions
@@ -213,9 +182,6 @@ def random_search(
         fusion_hidden = random.choice(fusion_hidden_range)
         
         run_name = encode_dim_name(d_model, d_ff, sent_hidden, fusion_hidden)
-        print(f"\n[{i+1}/{num_trials}] Testing dimensions:")
-        print(f"  d_model: {d_model}, d_ff: {d_ff}, sent_hidden: {sent_hidden}, fusion_hidden: {fusion_hidden}")
-        print(f"  Run name: {run_name}")
         
         # Modify config
         with open(config_path, 'r') as f:
@@ -232,7 +198,6 @@ def random_search(
             yaml.dump(config, f)
         
         try:
-            print(f"  🚀 Starting training...")
             
             result = run_training(temp_config, run_name, epochs, seed, extra_args)
             
@@ -247,10 +212,8 @@ def random_search(
                 'success': success,
             })
             
-            print(f"  {'✅' if success else '❌'} Completed")
             
         except Exception as e:
-            print(f"  ❌ Error: {e}")
             results.append({
                 'd_model': d_model,
                 'd_ff': d_ff,
@@ -309,8 +272,6 @@ def main():
     
     # Print extra args that will be passed through
     if extra_args:
-        print(f"\n📋 Extra arguments to pass through: {' '.join(extra_args)}")
-        print("   (e.g., --no-fincast, --fincast, --download-fincast, --horizons, etc.)\n")
     
     if args.method == 'grid':
         # Default values if not specified
@@ -363,15 +324,6 @@ def main():
     with open(results_file, 'w') as f:
         json.dump(results, f, indent=2)
     
-    print("\n" + "="*80)
-    print("Search Complete!")
-    print("="*80)
-    print(f"Results saved to: {results_file}")
-    print("\nNext steps:")
-    print("1. Check TensorBoard for each run (look for run_name in logs/)")
-    print("2. Compare validation losses across dimension combinations")
-    print("3. Choose dimensions with best validation performance")
-    print("="*80)
 
 if __name__ == '__main__':
     main()

@@ -36,18 +36,12 @@ try:
         from ffm import FFM as FinCastModel
         from ffm import FFmHparams
         FINCAST_AVAILABLE = True
-        print("✅ FinCast (FFM) imported successfully")
     else:
         raise ImportError(f"FinCast submodule not found at: {fincast_path}")
 except (ImportError, ModuleNotFoundError) as e:
     FINCAST_AVAILABLE = False
     FinCastModel = None
     FFmHparams = None
-    print(f"❌ FinCast import failed: {e}")
-    print("")
-    print("ℹ️  To use FinCast, follow setup instructions in scripts/03_training/README.md")
-    print("   Or set fincast.enabled: false in your config to disable FinCast.")
-    print("")
 
 
 class FinCastBackbone(nn.Module):
@@ -95,19 +89,13 @@ class FinCastBackbone(nn.Module):
             )
         
         # Initialize FFM with pre-trained hyperparameters
-        print(f"✅ Initializing pre-trained FinCast (FFM) model")
-        print(f"   Architecture: {n_layers} layers, {self.d_model} dims, {n_heads} heads")
-        print(f"   Context length: {max_len}")
-        print(f"   Checkpoint: {pretrained_path}")
         
         # Create FFM hyperparameters matching the checkpoint
         # Force GPU backend if CUDA is available
         use_gpu = torch.cuda.is_available()
         backend = "gpu" if use_gpu else "cpu"
         if use_gpu:
-            print(f"   🚀 Using GPU backend for FinCast")
         else:
-            print(f"   ⚠️  CUDA not available, using CPU backend")
         
         self.hparams = FFmHparams(
             context_len=max_len,
@@ -125,7 +113,6 @@ class FinCastBackbone(nn.Module):
         )
         
         # Load the pre-trained FFM model
-        print(f"   Loading pre-trained weights (3.97 GB, may take 30-60 seconds on CPU)...")
         import time
         start_time = time.time()
         self.ffm_wrapper = FinCastModel(
@@ -134,7 +121,6 @@ class FinCastBackbone(nn.Module):
             loading_mode=0  # Load without compilation
         )
         elapsed = time.time() - start_time
-        print(f"   ✅ Pre-trained FinCast loaded successfully ({elapsed:.1f}s)")
         
         # Register the actual PyTorch model (FFmTorch._model) as a submodule
         # so PyTorch tracks its parameters
@@ -143,19 +129,16 @@ class FinCastBackbone(nn.Module):
         # Move FFM model to GPU if available (backend="gpu" doesn't automatically move it)
         if use_gpu and torch.cuda.is_available():
             self.ffm_model = self.ffm_model.cuda()
-            print(f"   ✅ FinCast FFM model moved to GPU")
         
         # Create a projection layer to reduce dimensions if needed
         # This allows flexibility in output dimension
         self.output_projection = None
         if d_model != self.d_model:
             self.output_projection = nn.Linear(self.d_model, d_model)
-            print(f"   Adding projection: {self.d_model} -> {d_model} dims")
         
         # Freeze if specified
         if freeze:
             self.freeze_backbone()
-            print(f"   🔒 FinCast backbone frozen (no gradients)")
     
     def freeze_backbone(self):
         """Freeze all parameters in the FFM backbone."""
@@ -174,9 +157,7 @@ class FinCastBackbone(nn.Module):
             for i in range(max(0, total_layers - n_layers), total_layers):
                 for param in self.ffm_model.stacked_transformer.layers[i].parameters():
                     param.requires_grad = True
-            print(f"🔓 Unfroze top {n_layers} FinCast transformer layers for fine-tuning")
         else:
-            print(f"⚠️  Could not unfreeze layers - FFM structure not as expected")
     
     def _extract_embeddings(self, x: np.ndarray) -> torch.Tensor:
         """
@@ -337,17 +318,10 @@ class DecoderTransformerWithFinCast(nn.Module):
         fincast_feat_dim = self.num_price_series * fincast_output_dim
         augmented_features = self.num_rest_features + fincast_feat_dim
         
-        print(f"\n🔧 FinCast Integration:")
-        print(f"   Price series: {self.num_price_series}")
-        print(f"   FinCast output dim: {fincast_output_dim} (projected from 1280)")
-        print(f"   FinCast features: {fincast_feat_dim}")
-        print(f"   Rest features: {self.num_rest_features}")
-        print(f"   Total augmented: {augmented_features}")
         
         # Add LayerNorm to normalize mixed features (FinCast embeddings + rest features)
         # This is critical to prevent gradient explosion from feature scale mismatch
         self.feature_norm = nn.LayerNorm(augmented_features)
-        print(f"   ⚖️  Added LayerNorm({augmented_features}) for feature normalization")
         
         # Initialize main decoder transformer with augmented features
         if decoder_transformer_class is None:
@@ -381,15 +355,11 @@ class DecoderTransformerWithFinCast(nn.Module):
                     ]
                     
                     if price_indices:
-                        print(f"\n📈 Found {len(price_indices)} price series:")
                         for idx in price_indices[:5]:  # Show first 5
-                            print(f"   {idx:3d}: {features[idx]}")
                         if len(price_indices) > 5:
-                            print(f"   ... and {len(price_indices)-5} more")
                     
                     return price_indices
         except Exception as e:
-            print(f"⚠️  Could not load price indices from metadata: {e}")
         
         return []
     

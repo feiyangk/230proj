@@ -115,10 +115,9 @@ def fetch_ohlcv_data(
                     date_range = "no data"
                 
                 if page == 1:
-                    print(f"    📊 Page {page}: Got {len(results)} bars for {ticker} ({frequency}) [{date_range}]")
+                    pass
                 else:
-                    print(f"    📊 Page {page}: Got {len(results)} more bars (total: {len(all_results)}) [{date_range}]")
-                
+                    pass
                 # Check for pagination
                 next_url = data.get('next_url')
                 if next_url:
@@ -131,19 +130,16 @@ def fetch_ohlcv_data(
                     # No more pages
                     break
             elif data.get('status') == 'ERROR':
-                print(f"    ❌ API Error: {data.get('error', 'Unknown error')}")
                 break
             else:
                 # No results
                 break
         
         if all_results:
-            print(f"    ✅ Total: {len(all_results)} bars fetched across {page} page(s)")
         
         return all_results
         
     except Exception as e:
-        print(f"    ❌ API Error: {str(e)}")
         return all_results if all_results else []
 
 
@@ -273,7 +269,6 @@ def fetch_technical_indicator(
             'apiKey': POLYGON_API_KEY
         }
     else:
-        print(f"    ⚠️  Unknown indicator type: {indicator_type}")
         return []
     
     all_results = []
@@ -283,8 +278,6 @@ def fetch_technical_indicator(
         while url:
             # Debug: Log API request on first page
             if page == 1:
-                print(f"      DEBUG: API URL: {url}")
-                print(f"      DEBUG: Params: {params}")
             
             response = requests.get(url, params=params, timeout=30)
             response.raise_for_status()
@@ -303,25 +296,18 @@ def fetch_technical_indicator(
                     date_range = "N/A"
                 
                 if page == 1:
-                    print(f"      Page {page}: Got {len(results)} {indicator_type} values ({date_range})")
                     # Debug: Show sample timestamps from first page
                     if len(results) >= 10:
-                        print(f"      DEBUG: First 5 timestamps:")
                         for i in range(5):
                             ts = datetime.fromtimestamp(results[i]['timestamp'] / 1000)
-                            print(f"        [{i}] {ts}")
-                        print(f"      DEBUG: Last 5 timestamps:")
                         for i in range(-5, 0):
                             ts = datetime.fromtimestamp(results[i]['timestamp'] / 1000)
-                            print(f"        [{len(results)+i}] {ts}")
                         # Check interval between first two bars
                         if len(results) >= 2:
                             ts1 = datetime.fromtimestamp(results[0]['timestamp'] / 1000)
                             ts2 = datetime.fromtimestamp(results[1]['timestamp'] / 1000)
                             interval_minutes = (ts2 - ts1).total_seconds() / 60
-                            print(f"      DEBUG: Interval between first 2 bars: {interval_minutes:.1f} minutes")
                 else:
-                    print(f"      Page {page}: Got {len(results)} more values (total: {len(all_results)}) ({date_range})")
                 
                 # Check for pagination
                 next_url = data.get('next_url')
@@ -334,13 +320,11 @@ def fetch_technical_indicator(
                     break
             else:
                 if data.get('status') == 'ERROR':
-                    print(f"      ❌ API Error: {data.get('error', 'Unknown error')}")
                 break
         
         return all_results
         
     except Exception as e:
-        print(f"      ❌ API Error: {str(e)}")
         return all_results if all_results else []
 
 
@@ -429,11 +413,9 @@ def save_to_bigquery(bq_client: bigquery.Client, rows: list, table_id: str) -> i
         job = bq_client.load_table_from_json(rows, table_id, job_config=job_config)
         job.result()  # Wait for completion
         
-        print(f"  ✅ Inserted {len(rows)} rows to BigQuery")
         return len(rows)
         
     except Exception as e:
-        print(f"  ❌ BigQuery error: {str(e)}")
         return 0
 
 
@@ -469,7 +451,6 @@ def get_latest_timestamp(bq_client: bigquery.Client, table: str, ticker: str, fr
             return result['latest_timestamp'].iloc[0]
         return None
     except Exception as e:
-        print(f"  ⚠️  Warning: Could not query latest timestamp: {str(e)}")
         return None
 
 
@@ -490,60 +471,40 @@ def purge_ticker_data(
         tickers: List of tickers to purge
         data_type: Which data to purge - 'raw', 'indicators', or 'both'
     """
-    print("\n" + "=" * 80)
-    print("   🚨 PURGING ALL DATA FOR TICKERS 🚨")
-    print("=" * 80)
-    print()
     
     ticker_list = "', '".join(tickers)
     delete_query_template = "DELETE FROM `{}` WHERE ticker IN ('{}')" 
     
-    print(f"⚠️  WARNING: Deleting ALL records for {len(tickers)} ticker(s):")
-    print(f"   Tickers: {', '.join(tickers)}")
-    print(f"   Data type: {data_type.upper()}")
-    print(f"   This will remove data for ALL dates and ALL frequencies!")
-    print()
     
     # Confirmation prompt
     response = input("Type 'DELETE' to confirm: ")
     if response != 'DELETE':
-        print("❌ Purge cancelled")
-        print()
         return
     
-    print("\n🗑️  Executing deletion...")
     
     total_deleted = 0
     
     try:
         # Purge OHLCV data
         if data_type in ['raw', 'both']:
-            print(f"  Purging OHLCV data...")
             delete_query = delete_query_template.format(ohlcv_table, ticker_list)
             delete_job = bq_client.query(delete_query)
             delete_job.result()
             stats = delete_job._properties.get('statistics', {}).get('query', {})
             rows_deleted = int(stats.get('numDmlAffectedRows', 0))
-            print(f"  ✅ Deleted {rows_deleted:,} OHLCV rows")
             total_deleted += rows_deleted
         
         # Purge indicator data
         if data_type in ['indicators', 'both']:
-            print(f"  Purging technical indicators data...")
             delete_query = delete_query_template.format(indicators_table, ticker_list)
             delete_job = bq_client.query(delete_query)
             delete_job.result()
             stats = delete_job._properties.get('statistics', {}).get('query', {})
             rows_deleted = int(stats.get('numDmlAffectedRows', 0))
-            print(f"  ✅ Deleted {rows_deleted:,} indicator rows")
             total_deleted += rows_deleted
         
-        print(f"\n✅ Total purged: {total_deleted:,} rows")
-        print()
         
     except Exception as e:
-        print(f"❌ Purge failed: {str(e)}")
-        print()
 
 
 def flush_existing_data(
@@ -569,10 +530,6 @@ def flush_existing_data(
         frequency: Data frequency
         data_type: Which data to flush - 'raw', 'indicators', or 'both'
     """
-    print("\n" + "=" * 80)
-    print("   Flushing Existing Data")
-    print("=" * 80)
-    print()
     
     ticker_list = "', '".join(tickers)
     delete_query_template = """
@@ -582,10 +539,6 @@ def flush_existing_data(
       AND frequency = '{}'
     """
     
-    print(f"🗑️  Deleting existing data for {len(tickers)} ticker(s)...")
-    print(f"   Date range: {start_date} to {end_date}")
-    print(f"   Frequency: {frequency}")
-    print(f"   Data type: {data_type.upper()}")
     
     total_deleted = 0
     
@@ -599,7 +552,6 @@ def flush_existing_data(
             delete_job.result()
             stats = delete_job._properties.get('statistics', {}).get('query', {})
             rows_deleted = int(stats.get('numDmlAffectedRows', 0))
-            print(f"  ✅ Deleted {rows_deleted:,} OHLCV rows")
             total_deleted += rows_deleted
         
         # Flush indicator data
@@ -611,15 +563,10 @@ def flush_existing_data(
             delete_job.result()
             stats = delete_job._properties.get('statistics', {}).get('query', {})
             rows_deleted = int(stats.get('numDmlAffectedRows', 0))
-            print(f"  ✅ Deleted {rows_deleted:,} indicator rows")
             total_deleted += rows_deleted
         
-        print(f"\nTotal deleted: {total_deleted:,} rows")
-        print()
         
     except Exception as e:
-        print(f"❌ Flush failed: {str(e)}")
-        print()
 
 
 def merge_staging_to_main(
@@ -635,10 +582,6 @@ def merge_staging_to_main(
         staging_table: Staging table ID
         main_table: Main table ID
     """
-    print("\n" + "=" * 80)
-    print("   Merging Staging to Main Table")
-    print("=" * 80)
-    print()
     
     try:
         # Check staging count
@@ -647,11 +590,8 @@ def merge_staging_to_main(
         staging_count = list(result)[0]['count']
         
         if staging_count == 0:
-            print("⚠️  Staging table is empty, nothing to merge")
             return
         
-        print(f"📊 Staging table has {staging_count:,} rows")
-        print(f"🔄 Merging to main table (deduplicating by ticker + timestamp + frequency)...")
         
         # Perform MERGE
         merge_query = f"""
@@ -671,20 +611,12 @@ def merge_staging_to_main(
         stats = merge_job._properties.get('statistics', {}).get('query', {})
         rows_affected = stats.get('numDmlAffectedRows', 'unknown')
         
-        print(f"✅ Merge complete! Rows inserted to main table: {rows_affected}")
-        print()
         
         # Truncate staging
-        print("🧹 Truncating staging table...")
         truncate_query = f"TRUNCATE TABLE `{staging_table}`"
         bq_client.query(truncate_query).result()
-        print("✅ Staging table truncated")
-        print()
         
     except Exception as e:
-        print(f"❌ Merge failed: {str(e)}")
-        print("   Staging data preserved for manual review")
-        print()
 
 
 def ingest_polygon_data(
@@ -714,58 +646,25 @@ def ingest_polygon_data(
         indicators_filter: Set of specific indicators to fetch (e.g., {'SMA-10', 'RSI-14'})
         top_up: Whether to auto-detect latest data and fill from there (ignores start_date)
     """
-    print("=" * 80)
-    print("   Inflation prediction - Polygon to BigQuery Ingestion")
-    print("=" * 80)
-    print(f"\nProject: {PROJECT_ID}")
-    print(f"Dataset: {DATASET_ID}")
-    print(f"Tickers: {', '.join(tickers)}")
-    print(f"Date range: {start_date} to {end_date}")
-    print(f"Frequency: {frequency.upper()}")
-    print(f"Data type: {data_type.upper()}")
-    print()
     
     # Block technical indicators loading (disabled feature)
     if data_type in ['indicators', 'both']:
-        print("❌ " + "=" * 76)
-        print("❌ POLYGON TECHNICAL INDICATORS LOADING IS CURRENTLY DISABLED")
-        print("❌ " + "=" * 76)
-        print()
-        print("⚠️  Polygon API indicators are disabled for now.")
-        print()
-        print("✅ Please use SYNTHETIC INDICATORS instead:")
-        print("   Synthetic indicators are computed locally from raw OHLCV data")
-        print("   and offer more flexibility and faster processing.")
-        print()
-        print("   Run this command:")
-        print("   python scripts/01_extract/tickers_load_synthetic.py \\")
-        print(f"     --tickers {' '.join(tickers)} \\")
-        print(f"     --start {start_date} \\")
-        print(f"     --end {end_date} \\")
-        print(f"     --frequency {frequency}")
-        print()
-        print("   See scripts/README.md for more details on synthetic indicators.")
-        print()
         return
     
     # Validate configuration
     if not PROJECT_ID:
-        print("❌ Error: GCP_PROJECT_ID not set")
         return
     
     # Note: POLYGON_API_KEY is checked later only if we need to fetch data
     # If data already exists and --reload is not set, we skip the API call
     # This allows users without Polygon access to work with existing data
     if not POLYGON_API_KEY and (flush_existing or purge_tickers):
-        print("❌ Error: POLYGON_API_KEY not set (required for --reload/--purge)")
         return
     
     if frequency not in FREQUENCY_MAP:
-        print(f"❌ Error: Invalid frequency '{frequency}'. Use: {', '.join(FREQUENCY_MAP.keys())}")
         return
     
     # Initialize clients
-    print("🔧 Initializing BigQuery client...")
     bq_client = bigquery.Client(project=PROJECT_ID)
     
     # Table IDs for OHLCV
@@ -781,7 +680,6 @@ def ingest_polygon_data(
         purge_ticker_data(bq_client, main_table, indicators_main_table, tickers, data_type)
         # If purge-only (no dates provided), skip ingestion
         if start_date == '2000-01-01' and end_date == '2000-01-01':
-            print("\n✅ Purge complete! Skipping data ingestion.\n")
             return
         # Otherwise continue to ingest after purge
     elif flush_existing:
@@ -804,23 +702,17 @@ def ingest_polygon_data(
     
     # Process each ticker
     for ticker_idx, ticker in enumerate(tickers, 1):
-        print(f"[{ticker_idx}/{len(tickers)}] 📊 Processing {ticker}...")
         
         # Check if ticker already has data (unless reload flag is set)
         # This allows users without Polygon API access to work with existing data
         if not flush_existing and not purge_tickers:
             ticker_exists = check_ticker_exists(bq_client, ticker, frequency)
             if ticker_exists:
-                print(f"  ⏭️  SKIPPED: {ticker} already has data in BigQuery (use --reload to overwrite)")
-                print()
                 skipped_tickers.append(ticker)
                 continue
         
         # If we reach here, we need to fetch from Polygon - check API key
         if not POLYGON_API_KEY:
-            print(f"  ❌ ERROR: {ticker} has no data in BigQuery and POLYGON_API_KEY is not set")
-            print(f"     Cannot fetch data from Polygon.io without API key")
-            print()
             skipped_tickers.append(ticker)
             continue
         
@@ -833,8 +725,6 @@ def ingest_polygon_data(
             latest_ts = get_latest_timestamp(bq_client, main_table, ticker, frequency)
             
             if latest_ts:
-                print(f"  🔍 Top-up mode details:")
-                print(f"     Latest timestamp in BigQuery: {latest_ts.strftime('%Y-%m-%d %H:%M:%S')}")
                 
                 # Convert to date string, add 1 period based on frequency
                 if frequency in ['daily', '1d']:
@@ -853,8 +743,6 @@ def ingest_polygon_data(
                     next_date = latest_ts + timedelta(days=1)  # Default to daily
                     period_name = "1 day (default)"
                 
-                print(f"     Next period ({period_name}): {next_date.strftime('%Y-%m-%d %H:%M:%S')}")
-                print(f"     Requested end date: {ticker_end_date}")
                 
                 ticker_start_date = next_date.strftime('%Y-%m-%d')
                 
@@ -864,36 +752,25 @@ def ingest_polygon_data(
                 end_datetime = datetime.strptime(ticker_end_date, '%Y-%m-%d').replace(hour=23, minute=59, second=59)
                 end_datetime = pytz.UTC.localize(end_datetime)
                 
-                print(f"     End datetime (EOD): {end_datetime.strftime('%Y-%m-%d %H:%M:%S')}")
-                print(f"     Comparison: {next_date.strftime('%Y-%m-%d %H:%M:%S')} > {end_datetime.strftime('%Y-%m-%d %H:%M:%S')} ? {next_date > end_datetime}")
                 
                 # Skip if next period is after end of day
                 if next_date > end_datetime:
-                    print(f"  ✅ Already up-to-date! Latest data is at or past end date.")
-                    print(f"  ℹ️  Note: Top-up only fills forward from latest timestamp, not gaps in history.")
-                    print(f"  💡 To fill historical gaps (e.g., 2015-11-12 to 2016-01-03), use --start/--end without --top-up")
                     continue
                 else:
-                    print(f"  🔄 Fetching from {ticker_start_date} to {ticker_end_date}")
             else:
-                print(f"  📌 No existing data found. Using start date: {ticker_start_date}")
         
         # Fetch raw OHLCV data
         if data_type in ['raw', 'both']:
-            print(f"  📈 Fetching OHLCV data...")
             bars = fetch_ohlcv_data(ticker, ticker_start_date, ticker_end_date, frequency)
             
             if bars:
                 rows = convert_ohlcv_to_rows(ticker, bars, frequency)
-                print(f"  💾 Saving {len(rows)} OHLCV rows to staging...")
                 total_ohlcv_rows += save_to_bigquery(bq_client, rows, staging_table)
                 total_api_calls += 1
             else:
-                print(f"  ⚠️  No OHLCV data fetched for {ticker}")
         
         # Fetch technical indicators
         if data_type in ['indicators', 'both']:
-            print(f"  📉 Fetching technical indicators...")
             
             # Collect all indicator data first, then aggregate to wide format
             all_indicator_data = {}
@@ -912,7 +789,6 @@ def ingest_polygon_data(
                                 if spec not in indicators_filter:
                                     continue
                         
-                        print(f"    🔹 Fetching {ind_type}-{window if ind_type != 'MACD' else 'default'}...")
                         
                         if ind_type == 'MACD':
                             values = fetch_technical_indicator(
@@ -929,7 +805,6 @@ def ingest_polygon_data(
                             all_indicator_data[(ind_type, window_val)] = values
                             total_api_calls += 1
                         else:
-                            print(f"      ⚠️  No {ind_type} data")
                     
                         time.sleep(RATE_LIMIT_DELAY)
                     
@@ -937,12 +812,9 @@ def ingest_polygon_data(
             
             # Aggregate all indicators into wide format and save
             if all_indicator_data:
-                print(f"  📊 Aggregating indicators to wide format...")
                 rows = aggregate_indicators_to_wide_format(ticker, frequency, all_indicator_data)
-                print(f"  💾 Saving {len(rows)} indicator rows to staging...")
                 total_indicator_rows += save_to_bigquery(bq_client, rows, indicators_staging_table)
         
-        print(f"  ✅ {ticker} complete!\n")
     
     # Merge staging to main tables
     if auto_merge:
@@ -950,25 +822,9 @@ def ingest_polygon_data(
             merge_staging_to_main(bq_client, staging_table, main_table)
         
         if data_type in ['indicators', 'both'] and total_indicator_rows > 0:
-            print("\n" + "=" * 80)
-            print("   Merging Indicators Staging to Main Table")
-            print("=" * 80)
-            print()
             merge_staging_to_main(bq_client, indicators_staging_table, indicators_main_table)
-    print("=" * 80)
-    print("   Ingestion Complete!")
-    print("=" * 80)
-    print("📊 Statistics:")
-    print(f"  Tickers requested: {len(tickers)}")
-    print(f"  Tickers processed: {len(tickers) - len(skipped_tickers)}")
     if skipped_tickers:
-        print(f"  Tickers skipped: {len(skipped_tickers)} (already exist: {', '.join(skipped_tickers)})")
     if data_type in ['raw', 'both']:
-        print(f"  OHLCV rows inserted: {total_ohlcv_rows:,}")
-    print(f"  Total API calls: {total_api_calls}")
-    print(f"  Frequency: {frequency}")
-    print(f"  Data type: {data_type}")
-    print()
 
 
 def load_config(config_path: str = 'configs/tickers.yaml') -> dict:
@@ -985,7 +841,6 @@ def load_config(config_path: str = 'configs/tickers.yaml') -> dict:
         with open(config_path, 'r') as f:
             return yaml.safe_load(f)
     except FileNotFoundError:
-        print(f"⚠️  Config file not found: {config_path}")
         return None
 
 
@@ -1126,17 +981,12 @@ if __name__ == '__main__':
         config = load_config(args.config)
         if config and 'tickers' in config:
             tickers = config['tickers']
-            print(f"📋 Loaded {len(tickers)} tickers from {args.config}")
-            print(f"   Tickers: {', '.join(tickers[:10])}{'...' if len(tickers) > 10 else ''}")
         else:
-            print(f"❌ Error: No tickers found in config file {args.config}")
             sys.exit(1)
     else:
         # Tickers specified on command line
-        print(f"📋 Using {len(tickers)} ticker(s) from command line")
     
     if not tickers:
-        print("❌ Error: No tickers specified. Use --tickers or ensure config file has tickers")
         sys.exit(1)
     
     # Validate dates
@@ -1149,9 +999,7 @@ if __name__ == '__main__':
         if not args.start_date:
             if config and 'date_range' in config:
                 start_date = config['date_range'].get('start_date', '2015-11-10')
-                print(f"📅 Using config start_date: {start_date}")
             else:
-                print("❌ Error: --start date required for --top-up (or provide --config with date_range)")
                 sys.exit(1)
         else:
             start_date = args.start_date
@@ -1159,13 +1007,11 @@ if __name__ == '__main__':
         # End date defaults to today for top-up
         if not args.end_date:
             end_date = datetime.now().strftime('%Y-%m-%d')
-            print(f"📅 Top-up to today: {end_date}")
         else:
             end_date = args.end_date
     else:
         # Normal mode: both dates required
         if not args.start_date or not args.end_date:
-            print("❌ Error: --start and --end dates are required")
             sys.exit(1)
         start_date = args.start_date
         end_date = args.end_date
@@ -1174,7 +1020,6 @@ if __name__ == '__main__':
     indicators_filter = None
     if args.indicators:
         indicators_filter = set(args.indicators)
-        print(f"📌 Filtering indicators: {', '.join(sorted(indicators_filter))}\n")
     
     # Run ingestion
     ingest_polygon_data(

@@ -33,10 +33,6 @@ SYNTHETIC_TABLE = os.environ.get('BQ_SYNTHETIC_TABLE', 'synthetic_indicators')
 
 def print_header(text: str):
     """Print formatted header."""
-    print("\n" + "=" * 80)
-    print(f"   {text}")
-    print("=" * 80)
-    print()
 
 
 def load_config(config_path: str = 'configs/tickers.yaml') -> dict:
@@ -52,7 +48,6 @@ def load_config(config_path: str = 'configs/tickers.yaml') -> dict:
         with open(config_path, 'r') as f:
             return yaml.safe_load(f)
     except FileNotFoundError:
-        print(f"⚠️  Config file not found: {config_path}")
         return None
 
 
@@ -91,25 +86,14 @@ def check_alignment(client: bigquery.Client, ticker: str, frequency: str,
     
     result = client.query(query).to_dataframe().iloc[0]
     
-    print(f"Ticker: {ticker} | Frequency: {frequency}")
     if start_date or end_date:
-        print(f"Date range: {start_date or 'beginning'} to {end_date or 'end'}")
-    print()
-    print(f"✅ Aligned timestamps:        {result['aligned']:,}")
-    print(f"📦 Raw only (missing synthetic): {result['raw_only']:,}")
-    print(f"📈 Synthetic only (missing raw): {result['synthetic_only']:,}")
-    
+        pass
     # Only fail if raw data has timestamps missing from synthetic (data loss)
     if result['raw_only'] > 0:
-        print(f"\n❌ ALIGNMENT ERROR: Raw data has timestamps missing from synthetic!")
-        print(f"   This indicates synthetic indicators were not computed for all raw data.")
-        print(f"   Run with --show-misalignment for details.")
         return {'aligned': False, 'stats': result}
     elif result['synthetic_only'] > 0:
-        print(f"ℹ️  Note: Synthetic has {result['synthetic_only']:,} extra timestamps")
         return {'aligned': True, 'stats': result}
     else:
-        print(f"\n✅ Perfect alignment! All timestamps match.")
         return {'aligned': True, 'stats': result}
 
 
@@ -148,10 +132,7 @@ def show_alignment_details(client: bigquery.Client, ticker: str, frequency: str,
     
     raw_only = client.query(raw_only_query).to_dataframe()
     if not raw_only.empty:
-        print(f"📦 RAW ONLY (first 10 timestamps in raw but missing in synthetic):\n")
         for _, row in raw_only.iterrows():
-            print(f"   {row['timestamp']} ({row['date']})")
-        print()
 
 
 def fetch_raw_data(client: bigquery.Client, ticker: str, frequency: str,
@@ -174,9 +155,7 @@ def fetch_raw_data(client: bigquery.Client, ticker: str, frequency: str,
     ORDER BY timestamp
     """
     
-    print(f"Fetching {ticker} ({frequency}) from {start_date} to {end_date}...")
     df = client.query(query).to_dataframe()
-    print(f"✅ Fetched {len(df):,} rows\n")
     
     return df
 
@@ -297,7 +276,6 @@ def compute_indicators_local(df: pd.DataFrame, indicators: List[str]) -> pd.Data
         df['high_low_ratio'] = (df['high'] - df['low']) / df['close']
         computed.append('high_low_ratio')
     
-    print(f"✅ Computed {len(computed)} indicators: {', '.join(computed)}\n")
     
     return df
 
@@ -320,9 +298,7 @@ def fetch_synthetic_data(client: bigquery.Client, ticker: str, frequency: str,
     ORDER BY timestamp
     """
     
-    print(f"Fetching stored indicators for {ticker} ({frequency})...")
     df = client.query(query).to_dataframe()
-    print(f"✅ Fetched {len(df):,} rows\n")
     
     return df
 
@@ -340,7 +316,6 @@ def compare_indicators(computed_df: pd.DataFrame, stored_df: pd.DataFrame,
         how='inner'
     )
     
-    print(f"Comparing {len(merged):,} timestamps across {len(indicators)} indicators...\n")
     
     results = {}
     all_match = True
@@ -353,7 +328,6 @@ def compare_indicators(computed_df: pd.DataFrame, stored_df: pd.DataFrame,
         valid_rows = merged[[computed_col, stored_col]].dropna()
         
         if len(valid_rows) == 0:
-            print(f"⚠️  {indicator:20s}: No valid data to compare")
             results[indicator] = {'status': 'no_data', 'mismatches': 0}
             continue
         
@@ -369,12 +343,8 @@ def compare_indicators(computed_df: pd.DataFrame, stored_df: pd.DataFrame,
         max_rel_diff = rel_diff.max()
         
         if mismatches == 0:
-            print(f"✅ {indicator:20s}: Perfect match ({len(valid_rows):,} values)")
             results[indicator] = {'status': 'match', 'mismatches': 0, 'total': len(valid_rows)}
         else:
-            print(f"❌ {indicator:20s}: {mismatches:,} / {len(valid_rows):,} mismatches ({mismatch_pct:.1f}%)")
-            print(f"   Max absolute diff: {max_diff:.6f}")
-            print(f"   Max relative diff: {max_rel_diff:.2%}")
             results[indicator] = {
                 'status': 'mismatch',
                 'mismatches': mismatches,
@@ -384,15 +354,12 @@ def compare_indicators(computed_df: pd.DataFrame, stored_df: pd.DataFrame,
             }
             all_match = False
     
-    print()
     
     # Show sample validation results
-    print(f"\n🔍 Sample Validation Results (first 3 timestamps with all indicators):\n")
     sample_merged = merged[merged[list(merged.columns)[1:]].notna().all(axis=1)].head(3)
     
     if len(sample_merged) > 0:
         for idx, row in sample_merged.iterrows():
-            print(f"  Timestamp: {row['timestamp']}")
             for ind in indicators:
                 computed_col = f"{ind}_computed"
                 stored_col = f"{ind}_stored"
@@ -404,13 +371,9 @@ def compare_indicators(computed_df: pd.DataFrame, stored_df: pd.DataFrame,
                     rel_diff = diff / abs(stored_val) if stored_val != 0 else 0
                     
                     match_status = "✅" if rel_diff <= tolerance else "❌"
-                    print(f"    {match_status} {ind:15s}: stored={stored_val:>10.4f}, computed={computed_val:>10.4f}, diff={rel_diff:>8.2%}")
-            print()
     
     if all_match:
-        print("✅ All indicators match perfectly!")
     else:
-        print("⚠️  Some indicators have mismatches. Use --show-samples to see examples.")
     
     return results
 
@@ -444,16 +407,9 @@ def show_mismatch_samples(computed_df: pd.DataFrame, stored_df: pd.DataFrame,
         mismatches = valid_rows[valid_rows['rel_diff'] > tolerance]
         
         if len(mismatches) > 0:
-            print(f"\n{indicator} - Top {min(n_samples, len(mismatches))} mismatches:\n")
             top_mismatches = mismatches.nlargest(n_samples, 'rel_diff')
             
             for _, row in top_mismatches.iterrows():
-                print(f"  Timestamp: {row['timestamp']}")
-                print(f"    Computed: {row[computed_col]:.6f}")
-                print(f"    Stored:   {row[stored_col]:.6f}")
-                print(f"    Abs diff: {row['abs_diff']:.6f}")
-                print(f"    Rel diff: {row['rel_diff']:.2%}")
-                print()
 
 
 def export_combined_data(raw_df: pd.DataFrame, stored_df: pd.DataFrame, 
@@ -484,20 +440,14 @@ def export_combined_data(raw_df: pd.DataFrame, stored_df: pd.DataFrame,
     combined = combined[all_cols]
     
     # Show sample data (last 3 rows to ensure indicators are present)
-    print(f"📝 Sample Exported Data (last 3 rows):\n")
     
     if len(combined) > 0:
         for idx, row in combined.tail(3).iterrows():
-            print(f"  Timestamp: {row['timestamp']}")
-            print(f"    OHLCV: O={row['open']:.2f}, H={row['high']:.2f}, L={row['low']:.2f}, C={row['close']:.2f}, V={row['volume']:.0f}")
             for ind in indicators:
                 if ind in row:
                     val = row[ind]
                     if pd.notna(val):
-                        print(f"    {ind:20s}: {val:>10.4f}")
                     else:
-                        print(f"    {ind:20s}: NULL")
-            print()
     
     # Create output directory if it doesn't exist
     output_path = Path(output_file)
@@ -512,16 +462,6 @@ def export_combined_data(raw_df: pd.DataFrame, stored_df: pd.DataFrame,
     combined.to_csv(csv_file, index=False)
     csv_size = os.path.getsize(csv_file) / 1024 / 1024
     
-    print(f"✅ Exported {len(combined):,} rows to:")
-    print(f"   Parquet: {output_file} ({parquet_size:.2f} MB)")
-    print(f"   CSV:     {csv_file} ({csv_size:.2f} MB)")
-    print(f"\n📊 Data Summary:")
-    print(f"   Columns: {len(combined.columns)}")
-    print(f"   Date range: {combined['date'].min()} to {combined['date'].max()}")
-    print(f"\n💡 Load with:")
-    print(f"   df = pd.read_parquet('{output_file}')")
-    print(f"   df = pd.read_csv('{csv_file}')")
-    print()
 
 
 def main():
@@ -575,22 +515,9 @@ Examples:
     args = parser.parse_args()
 
     if not PROJECT_ID:
-        print("❌ Error: GCP_PROJECT_ID environment variable not set")
-        print("\nSet it with:")
-        print("  export GCP_PROJECT_ID='your-project-id'")
         sys.exit(1)
     
-    print("\n" + "=" * 80)
-    print("   Synthetic Indicators Verification")
-    print("=" * 80)
-    print(f"\nProject: {PROJECT_ID}")
-    print(f"Dataset: {DATASET_ID}")
-    print(f"Ticker: {args.ticker}")
-    print(f"Frequency: {args.frequency}")
-    print(f"Date range: {args.start} to {args.end}")
     if args.indicators:
-        print(f"Indicators: {', '.join(args.indicators)}")
-    print()
     
     # Initialize BigQuery client
     client = bigquery.Client(project=PROJECT_ID)
@@ -603,13 +530,9 @@ Examples:
             show_alignment_details(client, args.ticker, args.frequency, args.start, args.end)
         
         if not alignment_result['aligned']:
-            print("\n❌ ERROR: Raw data has timestamps missing from synthetic indicators!")
-            print("   This means synthetic indicators were not computed for all raw data.")
-            print("   You must fix the synthetic indicators before verification.\n")
             sys.exit(1)
     
     if args.check_alignment_only:
-        print("\n✅ Alignment check complete.")
         sys.exit(0)
     
     # Load indicators from config if not specified
@@ -617,18 +540,13 @@ Examples:
         config = load_config(args.config)
         if config and 'indicators' in config:
             args.indicators = config['indicators']
-            print(f"📋 Loaded {len(args.indicators)} indicators from config: {', '.join(args.indicators[:5])}{'...' if len(args.indicators) > 5 else ''}\n")
         else:
-            print("\n❌ Error: --indicators is required for verification")
-            print("   Either specify --indicators or ensure config file has 'indicators' list")
-            print("   Use --check-alignment-only if you only want to check alignment")
             sys.exit(1)
     
     # Fetch raw data
     raw_df = fetch_raw_data(client, args.ticker, args.frequency, args.start, args.end)
     
     if raw_df.empty:
-        print("❌ No raw data found for the specified parameters")
         sys.exit(1)
     
     # Compute indicators locally (no forward-filling - use only actual trading days)
@@ -639,7 +557,6 @@ Examples:
                                       args.start, args.end, args.indicators)
     
     if stored_df.empty:
-        print("❌ No synthetic indicator data found for the specified parameters")
         sys.exit(1)
     
     # Compare
@@ -670,20 +587,12 @@ Examples:
     mismatched = sum(1 for r in results.values() if r['status'] == 'mismatch')
     no_data = sum(1 for r in results.values() if r['status'] == 'no_data')
     
-    print(f"Total indicators checked: {total_indicators}")
-    print(f"✅ Matched: {matched}")
-    print(f"❌ Mismatched: {mismatched}")
-    print(f"⚠️  No data: {no_data}")
-    print()
     
     if mismatched == 0 and no_data == 0:
-        print("✅ All indicators verified successfully!")
         sys.exit(0)
     elif mismatched > 0:
-        print("❌ Verification failed - some indicators have mismatches")
         sys.exit(1)
     else:
-        print("⚠️  Verification incomplete - some indicators have no data")
         sys.exit(2)
 
 

@@ -60,21 +60,11 @@ def main():
     # Validate config file exists
     config_path = Path(args.config)
     if not config_path.exists():
-        print(f"❌ Error: Config file not found: {config_path}")
         sys.exit(1)
     
     # Check environment variables (optional for local training with cached data)
     if not os.getenv('GCP_PROJECT_ID'):
-        print("⚠️  Warning: GCP_PROJECT_ID not set")
-        print("   This is OK if using cached data from data/processed/")
-        print("   Will fail if --reload is used (requires BigQuery access)")
     
-    print("="*80)
-    print("🚀 LSTM MULTI-HORIZON - LOCAL TRAINING")
-    print("="*80)
-    print(f"\n📋 Configuration:")
-    print(f"   Config: {args.config}")
-    print("="*80)
     
     # Train
     try:
@@ -82,7 +72,6 @@ def main():
             config_path=args.config
         )
     except Exception as e:
-        print(f"\n❌ Training failed: {str(e)}")
         import traceback
         traceback.print_exc()
         sys.exit(1)

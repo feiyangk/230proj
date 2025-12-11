@@ -90,7 +90,6 @@ ROLES=(
   "roles/artifactregistry.reader"   # Needed for Artifact Registry
   "roles/bigquery.dataViewer"
   "roles/bigquery.jobUser"
-  "roles/logging.logWriter"
 )
 
 for role in "${ROLES[@]}"; do
@@ -168,20 +167,13 @@ else
   echo "  ✅ roles/aiplatform.user (granted)"
 fi
 
-# Grant logging access for TensorBoard events
 if gcloud projects get-iam-policy "$PROJECT_ID" \
     --flatten="bindings[].members" \
-    --filter="bindings.role:roles/logging.logWriter AND bindings.members:serviceAccount:$COMPUTE_SA" \
-    --format="value(bindings.role)" 2>/dev/null | grep -q "roles/logging.logWriter"; then
-  echo "  ✅ roles/logging.logWriter (already granted)"
 else
-  echo "  🔄 Granting roles/logging.logWriter..."
   gcloud projects add-iam-policy-binding "$PROJECT_ID" \
     --member="serviceAccount:${COMPUTE_SA}" \
-    --role="roles/logging.logWriter" \
     --condition=None \
     --quiet 2>/dev/null
-  echo "  ✅ roles/logging.logWriter (granted)"
 fi
 
 echo ""

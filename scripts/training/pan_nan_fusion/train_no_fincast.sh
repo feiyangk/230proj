@@ -21,3 +21,5 @@ echo "Training started with PID $!"
 echo "Logs: pan_nan_no_fincast_training.log"
 echo "Monitor with: tail -f pan_nan_no_fincast_training.log"
 
+
+

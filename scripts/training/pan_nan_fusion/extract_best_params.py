@@ -13,7 +13,6 @@ try:
     TB_AVAILABLE = True
 except ImportError:
     TB_AVAILABLE = False
-    print("Warning: TensorBoard not available. Install with: pip install tensorboard")
 
 
 def extract_metrics_from_tensorboard(log_dir):
@@ -53,7 +52,6 @@ def extract_metrics_from_tensorboard(log_dir):
         
         return metrics
     except Exception as e:
-        print(f"Error reading TensorBoard log {log_dir}: {e}")
         return None
 
 
@@ -79,17 +77,14 @@ def find_best_from_tensorboard(log_base_dir, results_json=None):
     log_dir = Path(log_base_dir)
     
     if not log_dir.exists():
-        print(f"TensorBoard log directory not found: {log_base_dir}")
         return None
     
     # Find all reg_* run directories
     reg_runs = [d for d in log_dir.iterdir() if d.is_dir() and d.name.startswith('reg_')]
     
     if not reg_runs:
-        print(f"No regularization search runs found in {log_base_dir}")
         return None
     
-    print(f"Found {len(reg_runs)} regularization search runs")
     
     all_results = []
     
@@ -101,12 +96,9 @@ def find_best_from_tensorboard(log_base_dir, results_json=None):
         if metrics:
             result = {**params, **metrics, 'run_name': run_name}
             all_results.append(result)
-            print(f"  {run_name}: val_loss={metrics.get('best_val_loss', 'N/A'):.6f}, MAE={metrics.get('best_mae', 'N/A'):.6f}")
         else:
-            print(f"  {run_name}: No metrics found")
     
     if not all_results:
-        print("No metrics extracted from any runs")
         return None
     
     # Find best by validation loss
@@ -134,48 +126,24 @@ def main():
     
     args = parser.parse_args()
     
-    print("="*80)
-    print("Finding Best Hyperparameters from TensorBoard Logs")
-    print("="*80)
     
     results = find_best_from_tensorboard(args.tensorboard_dir, args.results_json)
     
     if not results:
-        print("\nCould not extract results. Make sure TensorBoard logs exist.")
         return
     
-    print("\n" + "="*80)
-    print("BEST HYPERPARAMETERS")
-    print("="*80)
     
-    print("\n📊 Best by Validation Loss:")
     best_loss = results['best_by_val_loss']
-    print(f"  Run: {best_loss['run_name']}")
-    print(f"  model_dropout: {best_loss['model_dropout']}")
-    print(f"  weight_decay: {best_loss['weight_decay']}")
-    print(f"  clip_norm: {best_loss['clip_norm']}")
-    print(f"  fusion_dropout: {best_loss.get('fusion_dropout', 'N/A')}")
-    print(f"  Best Val Loss: {best_loss.get('best_val_loss', 'N/A'):.6f}")
-    print(f"  Best MAE: {best_loss.get('best_mae', 'N/A'):.6f}")
-    print(f"  Best RMSE: {best_loss.get('best_rmse', 'N/A'):.6f}")
     
-    print("\n📊 Best by MAE:")
     best_mae = results['best_by_mae']
-    print(f"  Run: {best_mae['run_name']}")
-    print(f"  model_dropout: {best_mae['model_dropout']}")
-    print(f"  weight_decay: {best_mae['weight_decay']}")
-    print(f"  clip_norm: {best_mae['clip_norm']}")
-    print(f"  fusion_dropout: {best_mae.get('fusion_dropout', 'N/A')}")
-    print(f"  Best Val Loss: {best_mae.get('best_val_loss', 'N/A'):.6f}")
-    print(f"  Best MAE: {best_mae.get('best_mae', 'N/A'):.6f}")
-    print(f"  Best RMSE: {best_mae.get('best_rmse', 'N/A'):.6f}")
     
     if args.output:
         with open(args.output, 'w') as f:
             json.dump(results, f, indent=2)
-        print(f"\n✅ Results saved to: {args.output}")
 
 
 if __name__ == '__main__':
     main()
+
+
 

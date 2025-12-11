@@ -94,9 +94,6 @@ def submit_parallel_jobs(configs, machine_type='e2-standard-4', delay_between_jo
     jobs = []
     timestamp = datetime.now().strftime('%Y%m%d-%H%M%S')
     
-    print(f"\n{'='*80}")
-    print(f"   Submitting {len(configs)} Parallel Training Jobs")
-    print(f"{'='*80}\n")
     
     for i, config in enumerate(configs, 1):
         job_name = f"model-parallel-{timestamp}-{i:02d}"
@@ -110,8 +107,6 @@ def submit_parallel_jobs(configs, machine_type='e2-standard-4', delay_between_jo
         for key, value in config.items():
             args.append(f'--{key}={value}')
         
-        print(f"[{i}/{len(configs)}] Submitting: {job_name}")
-        print(f"  Config: {config}")
         
         # Create and submit job
         job = aiplatform.CustomJob(
@@ -129,17 +124,11 @@ def submit_parallel_jobs(configs, machine_type='e2-standard-4', delay_between_jo
         job.run(sync=False)  # Async submission
         jobs.append(job)
         
-        print(f"  ✅ Submitted: {job.resource_name}\n")
         
         # Delay to avoid API rate limits
         if i < len(configs):
             time.sleep(delay_between_jobs)
     
-    print(f"{'='*80}")
-    print(f"✅ All {len(jobs)} jobs submitted!")
-    print(f"\n📊 Monitor at:")
-    print(f"https://console.cloud.google.com/vertex-ai/training/custom-jobs?project={PROJECT_ID}")
-    print(f"{'='*80}\n")
     
     return jobs
 
@@ -148,13 +137,11 @@ if __name__ == '__main__':
     # Generate configurations
     configs = generate_configurations(HYPERPARAMETER_GRID, max_trials=12)
     
-    print(f"\nGenerated {len(configs)} configurations:")
     for i, cfg in enumerate(configs[:5], 1):
-        print(f"  {i}. {cfg}")
+        pass
     if len(configs) > 5:
-        print(f"  ... and {len(configs) - 5} more\n")
+        pass
     
     # Submit jobs
     jobs = submit_parallel_jobs(configs, machine_type='n1-highmem-4')
     
-    print(f"\n🚀 {len(jobs)} jobs running in parallel!")

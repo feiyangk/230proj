@@ -67,21 +67,10 @@ def submit_hyperparameter_tuning_job(
         staging_bucket=f'gs://{GCS_BUCKET}'
     )
     
-    print(f"\n{'='*80}")
-    print(f"   Vertex AI Hyperparameter Tuning Job")
-    print(f"{'='*80}")
-    print(f"Job Name: {job_name}")
-    print(f"Model Type: {model_type}")
-    print(f"Algorithm: Bayesian Optimization (default)")
-    print(f"Max Trials: {max_trial_count}")
-    print(f"Parallel Trials: {parallel_trial_count}")
     if dataset_version:
         full_dataset_version = f"{model_type}/{dataset_version}"
-        print(f"Dataset Version: {full_dataset_version} (shared across all trials)")
     else:
-        print(f"Dataset: Each trial will generate from BigQuery")
-    print(f"{'='*80}\n")
-    
+        full_dataset_version = None
     # Define hyperparameter search space
     # Matches HYPERPARAMETER_GRID from submit_parallel.py
     hyperparameter_specs = {
@@ -163,13 +152,8 @@ def submit_hyperparameter_tuning_job(
         parallel_trial_count=parallel_trial_count,
     )
     
-    print(f"\n🚀 Submitting hyperparameter tuning job...")
     hp_job.run()
     
-    print(f"\n✅ Job submitted!")
-    print(f"📊 Monitor at:")
-    print(f"https://console.cloud.google.com/vertex-ai/training/training-pipelines?project={PROJECT_ID}")
-    print(f"\n💡 Best trial will be automatically identified!\n")
     
     return hp_job
 

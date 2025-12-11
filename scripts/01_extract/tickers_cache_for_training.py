@@ -28,7 +28,6 @@ import os
 import sys
 import argparse
 import yaml
-import logging
 from datetime import datetime, date
 from typing import List, Optional
 
@@ -45,9 +44,7 @@ except ImportError:
 # Add project root to path (two levels up from scripts/01_extract/)
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 
-from utils.logger import setup_logger
 
-logger = setup_logger(__name__)
 
 
 def load_config(config_path: str = 'configs/tickers.yaml') -> dict:
@@ -61,7 +58,6 @@ def save_config(config: dict, config_path: str = 'configs/tickers.yaml'):
     """Save ticker configuration to YAML file."""
     with open(config_path, 'w') as f:
         yaml.dump(config, f, default_flow_style=False, sort_keys=False)
-    logger.info(f"Updated config saved to {config_path}")
 
 
 def build_query(
@@ -141,11 +137,8 @@ def extract_data(
     # Check if output already exists
     output_path = config['output']['raw_data_path']
     if os.path.exists(output_path) and not force:
-        logger.warning(f"Output file already exists: {output_path}")
-        logger.warning("Use --force to re-download, or load existing file")
         response = input("Load existing file? (y/n): ")
         if response.lower() == 'y':
-            logger.info(f"Loading existing file: {output_path}")
             return pd.read_parquet(output_path)
     
     # Build BigQuery table name
@@ -161,27 +154,15 @@ def extract_data(
         columns=config.get('columns')
     )
     
-    logger.info("=" * 60)
-    logger.info("BigQuery Extraction")
-    logger.info("=" * 60)
-    logger.info(f"Tickers: {len(tickers)} ({', '.join(tickers[:5])}{'...' if len(tickers) > 5 else ''})")
-    logger.info(f"Date range: {start_date} to {end_date or 'today'}")
-    logger.info(f"Table: {table_name}")
-    logger.info(f"Output: {output_path}")
-    logger.info("=" * 60)
     
     # Show query (first 500 chars)
-    logger.info(f"Query:\n{query[:500]}...")
     
     # Execute query
-    logger.info("Executing BigQuery query...")
     client = bigquery.Client(project=project_id)
     
     try:
         df = client.query(query).to_dataframe()
-        logger.info(f"✓ Query successful: {len(df):,} rows retrieved")
     except Exception as e:
-        logger.error(f"BigQuery query failed: {e}")
         raise
     
     return df
@@ -202,7 +183,6 @@ def pivot_to_wide_format(df: pd.DataFrame) -> pd.DataFrame:
         2023-01-01 | 130       | 132       | 129      | 131        | 100M        | 240       | ...
         2023-01-02 | 131       | 133       | 130      | 132        | 95M         | 242       | ...
     """
-    logger.info("Pivoting to wide format (one row per date)...")
     
     # Get value columns (everything except ticker and date)
     value_cols = [col for col in df.columns if col not in ['ticker', 'date', 'timestamp', 'ingested_at']]
@@ -219,7 +199,6 @@ def pivot_to_wide_format(df: pd.DataFrame) -> pd.DataFrame:
     wide_df = pd.concat(wide_dfs, axis=1)
     wide_df.reset_index(inplace=True)
     
-    logger.info(f"✓ Pivoted to wide format: {len(wide_df)} dates × {len(wide_df.columns)} columns")
     
     return wide_df
 
@@ -232,7 +211,6 @@ def handle_missing_data(df: pd.DataFrame) -> pd.DataFrame:
     - Keep only actual trading days (no weekends/holidays)
     - Fill minor gaps with forward-fill
     """
-    logger.info("Handling missing data...")
     
     # Convert date to datetime if not already
     df['date'] = pd.to_datetime(df['date'])
@@ -240,7 +218,6 @@ def handle_missing_data(df: pd.DataFrame) -> pd.DataFrame:
     # Check calendar coverage
     date_range = pd.date_range(df['date'].min(), df['date'].max(), freq='D')
     missing_dates = len(date_range) - len(df)
-    logger.info(f"  Data spans {len(df)} trading days ({missing_dates} calendar days missing - weekends/holidays)")
     
     # Forward-fill any minor gaps within trading days
     # This handles rare cases where a ticker might be missing a single day
@@ -250,14 +227,11 @@ def handle_missing_data(df: pd.DataFrame) -> pd.DataFrame:
     # Count remaining missing values
     missing_summary = df.isnull().sum()
     if missing_summary.sum() > 0:
-        logger.warning(f"  Remaining missing values after forward-fill:")
         for col, count in missing_summary[missing_summary > 0].items():
-            logger.warning(f"    {col}: {count} missing ({count/len(df)*100:.1f}%)")
-    
+            pass
     # Drop rows where ALL ticker columns are null (shouldn't happen)
     df = df.dropna(subset=ticker_cols, how='all')
     
-    logger.info(f"✓ Cleaned data: {len(df)} trading days (weekends/holidays excluded)")
     
     return df
 
@@ -268,23 +242,12 @@ def save_to_parquet(df: pd.DataFrame, output_path: str, compression: str = 'snap
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     
     # Save to Parquet
-    logger.info(f"Saving to {output_path}...")
     df.to_parquet(output_path, compression=compression, index=False)
     
     # Get file size
     file_size_mb = os.path.getsize(output_path) / (1024 * 1024)
-    logger.info(f"✓ Saved: {file_size_mb:.2f} MB")
     
     # Show summary
-    logger.info("\n" + "=" * 60)
-    logger.info("EXTRACTION COMPLETE")
-    logger.info("=" * 60)
-    logger.info(f"File: {output_path}")
-    logger.info(f"Rows: {len(df):,}")
-    logger.info(f"Columns: {len(df.columns):,}")
-    logger.info(f"Date range: {df['date'].min()} to {df['date'].max()}")
-    logger.info(f"Size: {file_size_mb:.2f} MB")
-    logger.info("=" * 60)
 
 
 def check_data_availability(config: dict, tickers: Optional[List[str]] = None) -> pd.DataFrame:
@@ -315,11 +278,6 @@ def check_data_availability(config: dict, tickers: Optional[List[str]] = None) -
     if not project_id:
         raise ValueError("GCP_PROJECT_ID environment variable not set")
     
-    logger.info("=" * 80)
-    logger.info("DATA AVAILABILITY CHECK")
-    logger.info("=" * 80)
-    logger.info(f"Checking {len(tickers)} tickers in: {table_name}")
-    logger.info("=" * 80)
     
     # Format ticker list for SQL
     ticker_list = ', '.join([f"'{t}'" for t in tickers])
@@ -342,14 +300,11 @@ def check_data_availability(config: dict, tickers: Optional[List[str]] = None) -
     """
     
     # Execute query
-    logger.info("Executing availability query...")
     client = bigquery.Client(project=bq_config['project_id'])
     
     try:
         df = client.query(query).to_dataframe()
-        logger.info(f"✓ Query successful\n")
     except Exception as e:
-        logger.error(f"Query failed: {e}")
         raise
     
     # Check for missing tickers
@@ -357,12 +312,8 @@ def check_data_availability(config: dict, tickers: Optional[List[str]] = None) -
     missing_tickers = set(tickers) - found_tickers
     
     if missing_tickers:
-        logger.warning(f"⚠️  Missing tickers (no data found): {', '.join(sorted(missing_tickers))}\n")
     
     # Print summary table
-    print("\n" + "=" * 70)
-    print(f"{'Ticker':<10} {'Start Date':<12} {'End Date':<12} {'Trading Days':<15}")
-    print("=" * 70)
     
     for _, row in df.iterrows():
         ticker = row['ticker']
@@ -370,29 +321,18 @@ def check_data_availability(config: dict, tickers: Optional[List[str]] = None) -
         end = row['end_date'].strftime('%Y-%m-%d')
         days = int(row['trading_days'])
         
-        print(f"{ticker:<10} {start:<12} {end:<12} {days:<15}")
     
-    print("=" * 70)
     
     # Summary statistics
     if len(df) > 0:
-        print(f"\nSummary:")
-        print(f"  Total tickers found: {len(df)}")
-        print(f"  Missing tickers: {len(missing_tickers)}")
-        print(f"  Average trading days: {df['trading_days'].mean():.0f}")
-        print(f"  Min start date: {df['start_date'].min().strftime('%Y-%m-%d')}")
-        print(f"  Max end date: {df['end_date'].max().strftime('%Y-%m-%d')}")
         
         # Identify tickers with significantly fewer days than average
         avg_days = df['trading_days'].mean()
         threshold = avg_days * 0.9  # Less than 90% of average
         limited_data = df[df['trading_days'] < threshold]
         if len(limited_data) > 0:
-            print(f"\n⚠️  Tickers with limited data (<90% of average):")
             for _, row in limited_data.iterrows():
-                print(f"    {row['ticker']}: {int(row['trading_days'])} days (avg: {avg_days:.0f})")
     
-    print("\n" + "=" * 70)
     
     return df
 
@@ -429,7 +369,6 @@ def main():
     
     if args.replace_tickers:
         tickers = args.replace_tickers
-        logger.info(f"Replacing tickers with: {tickers}")
         if args.save_config:
             config['tickers'] = tickers
             save_config(config, args.config)
@@ -437,21 +376,18 @@ def main():
     if args.add_tickers:
         new_tickers = [t for t in args.add_tickers if t not in tickers]
         tickers.extend(new_tickers)
-        logger.info(f"Adding tickers: {new_tickers}")
         if args.save_config:
             config['tickers'] = tickers
             save_config(config, args.config)
     
     if args.remove_tickers:
         tickers = [t for t in tickers if t not in args.remove_tickers]
-        logger.info(f"Removing tickers: {args.remove_tickers}")
         if args.save_config:
             config['tickers'] = tickers
             save_config(config, args.config)
     
     if args.tickers:
         tickers = args.tickers
-        logger.info(f"Using command-line tickers: {tickers}")
     
     # Check availability mode
     if args.check_availability:
@@ -484,7 +420,6 @@ def main():
         config['output']['compression']
     )
     
-    logger.info("\n✓ Phase 1 complete! Ready for Phase 2 (feature engineering)")
 
 
 if __name__ == '__main__':

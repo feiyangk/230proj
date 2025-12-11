@@ -4,9 +4,7 @@ import numpy as np
 import pandas as pd
 import os
 from typing import Tuple
-import logging
 
-logger = logging.getLogger(__name__)
 
 
 def generate_dummy_data(
@@ -40,7 +38,6 @@ def generate_dummy_data(
     """
     np.random.seed(seed)
     
-    logger.info(f"Generating dummy data: {n_samples} samples, {n_features} features")
     
     # Generate timestamps
     timestamps = pd.date_range(
@@ -124,10 +121,8 @@ def generate_dummy_data(
     
     # Optionally shuffle (breaks temporal order!)
     if shuffle:
-        logger.info("Shuffling data before split (temporal order broken)")
         df = df.sample(frac=1, random_state=seed).reset_index(drop=True)
     else:
-        logger.info("Maintaining temporal order (sequential split)")
     
     # Split data
     train_end = int(n_samples * train_ratio)
@@ -137,7 +132,6 @@ def generate_dummy_data(
     val_df = df.iloc[train_end:val_end]
     test_df = df.iloc[val_end:]
     
-    logger.info(f"Split ratios: train={train_ratio:.0%}, val={val_ratio:.0%}, test={1-(train_ratio+val_ratio):.0%}")
     
     # Save to CSV
     os.makedirs(output_dir, exist_ok=True)
@@ -150,24 +144,12 @@ def generate_dummy_data(
     val_df.to_csv(val_path, index=False)
     test_df.to_csv(test_path, index=False)
     
-    logger.info(f"Saved train data: {len(train_df)} samples to {train_path}")
-    logger.info(f"Saved val data: {len(val_df)} samples to {val_path}")
-    logger.info(f"Saved test data: {len(test_df)} samples to {test_path}")
     
     # Print statistics
-    logger.info(f"\nData statistics:")
-    logger.info(f"Feature range: [{features.min():.2f}, {features.max():.2f}]")
     
     if multi_horizon:
-        logger.info(f"Target 1M range: [{target_1m.min():.2f}, {target_1m.max():.2f}], "
-                   f"mean: {target_1m.mean():.2f}, std: {target_1m.std():.2f}")
-        logger.info(f"Target 3M range: [{target_3m.min():.2f}, {target_3m.max():.2f}], "
-                   f"mean: {target_3m.mean():.2f}, std: {target_3m.std():.2f}")
-        logger.info(f"Target 6M range: [{target_6m.min():.2f}, {target_6m.max():.2f}], "
-                   f"mean: {target_6m.mean():.2f}, std: {target_6m.std():.2f}")
+        pass
     else:
-        logger.info(f"Target range: [{target.min():.2f}, {target.max():.2f}]")
-        logger.info(f"Target mean: {target.mean():.2f}, std: {target.std():.2f}")
 
 
 if __name__ == '__main__':
